@@ -89,7 +89,8 @@ OFF: 其余全部 — 禁止实现、禁止初始化、禁止写 UI
 - [x] `system.conf` 中任一 OFF 系统未被初始化 (零初始化验证)  ← autotest
 
 自动回归入口: `tests/dev_s1_autotest.tscn` (23 项) + `dev_s1_navtest.tscn` (5 项跳转) +
-`dev_s1_settest.tscn` (11 项设置面板), headless 运行, 命令见 `.claude/skills/test/SKILL.md`。
+`dev_s1_settest.tscn` (11 项设置面板) + `dev_s1_inttest.tscn` (14 项室内导航), headless 运行,
+命令见 `.claude/skills/test/SKILL.md`。
 
 ## 3. Dev-S2 野外物资 + 资源 + 基础建筑
 
@@ -322,11 +323,17 @@ assets/
 - 没拿到正式图前, 全部可用 ui_icon_placeholder.svg + 纯色块顶着跑, 不阻塞开发
 
 **占位图现行约定 (用户定稿, 优先于上表文件名)**: 缺图处放 `blank_XX_宽x高.png` 纯色占位
-(背景类 1920×1080, 如 `blank_login_1920x1080.png` / `blank_lv1~3_1920x1080.png`), 用户后续
+(背景类 1920×1080, 如 `blank_login_1920x1080.png` / `blank_lv1~3_1920x1080.png` /
+`blank_interior_1920x1080.png`; 面板类 512×512, 如 `blank_room_panel_512x512.png`), 用户后续
 **直接覆盖同名文件**填实际 UI 资源, 代码零改动。主场景背景按庇护所等级自动换景
 (main.gd `_level_bg_texture()`: `blank_lv%d_1920x1080.png`, 缺文件回退 lv1)。
 **按钮例外**: 用真实图 `assets/ui/btn_primary.png`(+_hover/_pressed), 9-slice 由
 button_skin.gd 处理, 不放 blank。新增图片资源后必须先 `godot --headless --import`。
+
+**庇护所内部场景 (S1 表现层扩展)**: 主界面右下角 "进入庇护所" 按钮 →
+`src/scenes/shelter_interior.tscn` (全代码 UI 壳)。2×3 剖面式房间面板 (上层 卧室/储藏室/
+厨房, 下层 工作台/大门), 房间解锁数 = 当前等级 `building_slots`, 只读展示, 建造/入住等
+房间操作待 S2+ 各系统开启后实现。入口按钮 EnterShelterButton, 返回 BackButton。
 
 ### 13.6 音频素材格式/尺寸总规范
 

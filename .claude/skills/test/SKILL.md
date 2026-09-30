@@ -1,6 +1,6 @@
 ---
 name: test
-description: 运行末日庇护所 (Godot) 项目的 headless 回归测试三件套。当用户说"跑测试/回归/验证/test"或改动 src/、configs/ 后需要验证时使用。
+description: 运行末日庇护所 (Godot) 项目的 headless 回归测试四件套。当用户说"跑测试/回归/验证/test"或改动 src/、configs/ 后需要验证时使用。
 ---
 
 # Dev-S1 headless 回归测试
@@ -20,7 +20,7 @@ bash 用法示例: `GODOT=/home/xiaomi/p-luojialei/Desktop/godot/Godot_v4.7.2-st
 $GODOT --headless --import
 ```
 
-## 测试三件套 (可并行跑)
+## 测试四件套 (可并行跑)
 
 ```bash
 # 23 项: 配置/等级链/升级冷却/存读档/零初始化 (含 2×30s 冷却, 整体 ~70s)
@@ -31,6 +31,9 @@ $GODOT --headless --path . res://tests/dev_s1_navtest.tscn
 
 # 11 项: 设置面板 (弹出/全屏/音量持久化/Esc 关闭)
 $GODOT --headless --path . res://tests/dev_s1_settest.tscn
+
+# 14 项: 主界面→庇护所内部导航 (进入按钮/房间面板/返回)
+$GODOT --headless --path . res://tests/dev_s1_inttest.tscn
 ```
 
 ## 判定与收尾

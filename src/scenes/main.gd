@@ -2,9 +2,11 @@ extends Control
 # ============================================================
 # Main — Dev-S1 最小游戏界面 (场景背景 assets/blank_lvN_1920x1080.png, 按等级切换, 后续填实际 UI 资源)
 # 庇护所面板: 名称/等级/满级进度/数值 + 升级按钮(冷却) + 保存/读档
+# 背景可进入庇护所内部场景 (右下角"进入庇护所"按钮)
 # ============================================================
 
 const LOGIN_SCENE := "res://src/scenes/login.tscn"
+const INTERIOR_SCENE := "res://src/scenes/shelter_interior.tscn"
 
 var _shelter: ShelterSystem
 
@@ -66,6 +68,18 @@ func _build_ui() -> void:
 		settings_button.pressed.connect(_on_settings_pressed)
 		ButtonSkin.apply(settings_button)
 		add_child(settings_button)
+
+	var enter_shelter_button := Button.new()
+	enter_shelter_button.name = "EnterShelterButton"
+	enter_shelter_button.text = "进入庇护所"
+	enter_shelter_button.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	enter_shelter_button.position = Vector2(-392, -120)
+	enter_shelter_button.size = Vector2(320, 64)
+	enter_shelter_button.custom_minimum_size = Vector2(320, 64)
+	enter_shelter_button.add_theme_font_size_override("font_size", 26)
+	enter_shelter_button.pressed.connect(_on_enter_shelter_pressed)
+	ButtonSkin.apply(enter_shelter_button)
+	add_child(enter_shelter_button)
 
 	var panel := PanelContainer.new()
 	var style := StyleBoxFlat.new()
@@ -255,6 +269,10 @@ func _on_settings_pressed() -> void:
 
 func _on_back_pressed() -> void:
 	get_tree().change_scene_to_file(LOGIN_SCENE)
+
+
+func _on_enter_shelter_pressed() -> void:
+	get_tree().change_scene_to_file(INTERIOR_SCENE)
 
 
 func _on_upgrade_started(_cooldown: float) -> void:
