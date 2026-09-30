@@ -5,28 +5,32 @@ description: 运行末日庇护所 (Godot) 项目的 headless 回归测试三件
 
 # Dev-S1 headless 回归测试
 
-Godot 二进制: `/home/xiaomi/p-luojialei/Desktop/godot/Godot_v4.7.2-stable_linux.x86_64`
-工程根: `/home/xiaomi/p-luojialei/Desktop/game` (所有命令在该目录执行)
+Godot 4.7.2 二进制 (按平台选, 下文用 `$GODOT` 代称):
+- Linux: `/home/xiaomi/p-luojialei/Desktop/godot/Godot_v4.7.2-stable_linux.x86_64`
+- Windows: Godot_v4.7.2-stable_win64.exe 的实际路径 (标准版, 版本号必须 4.7.2)
+
+工程根 = 仓库根 (project.godot 所在目录), 所有命令在该目录执行。
+bash 用法示例: `GODOT=/home/xiaomi/p-luojialei/Desktop/godot/Godot_v4.7.2-stable_linux.x86_64` 赋值后, 以下命令原样可用; Windows 端把 $GODOT 换成 exe 全路径。
 
 ## 前置
 
 若本轮新增/修改过 class_name 或图片/音频资源, 先导入:
 
 ```bash
-/home/xiaomi/p-luojialei/Desktop/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --import
+$GODOT --headless --import
 ```
 
 ## 测试三件套 (可并行跑)
 
 ```bash
 # 23 项: 配置/等级链/升级冷却/存读档/零初始化 (含 2×30s 冷却, 整体 ~70s)
-/home/xiaomi/p-luojialei/Desktop/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --path . res://tests/dev_s1_autotest.tscn
+$GODOT --headless --path . res://tests/dev_s1_autotest.tscn
 
 # 5 项: 登录→Main 跳转, 新游戏重置 Lv1 第1天 08:00
-/home/xiaomi/p-luojialei/Desktop/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --path . res://tests/dev_s1_navtest.tscn
+$GODOT --headless --path . res://tests/dev_s1_navtest.tscn
 
 # 11 项: 设置面板 (弹出/全屏/音量持久化/Esc 关闭)
-/home/xiaomi/p-luojialei/Desktop/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --path . res://tests/dev_s1_settest.tscn
+$GODOT --headless --path . res://tests/dev_s1_settest.tscn
 ```
 
 ## 判定与收尾

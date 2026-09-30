@@ -26,7 +26,7 @@ CONF 数据文件可以提前存在 (休眠), 但对应 System/UI/玩法代码�
 
 | 阶段 | 玩法内容 | 开启开关 | 状态 |
 |---|---|---|---|
-| Dev-S1 | 庇护所 + 升级 (无资源) | shelter | ⬜ 当前 |
+| Dev-S1 | 庇护所 + 升级 (无资源) | shelter, settings | 🟡 代码+自动测试完成, 待 F5 人工验收 |
 | Dev-S2 | 野外物资 + 资源 + 基础建筑 | resource, building, loot | ⬜ |
 | Dev-S3 | 敌人与战斗 | enemy, combat | ⬜ |
 | Dev-S4 | NPC 与幸存者 | npc, population, survivor, event | ⬜ |
@@ -50,9 +50,12 @@ Godot 里 F5 能运行: 看到庇护所 Lv1, 点升级 → Lv2 → Lv3, 退出�
 ### 2.2 开关 (configs/system.conf, 应保持一致)
 
 ```text
-ON : shelter   (+ CORE 恒开: core/config/save/time/ui)
+ON : shelter, settings   (+ CORE 恒开: core/config/save/time/ui)
 OFF: 其余全部 — 禁止实现、禁止初始化、禁止写 UI
 ```
+
+> settings = 设置面板 (全屏开关 + 主音量, src/ui/settings_overlay.gd), 属于 CORE-ui 的延伸;
+> 入口在登录/主界面, 修改即生效即存 `user://settings.json`。
 
 ### 2.3 范围裁剪 (关键)
 
@@ -78,12 +81,15 @@ OFF: 其余全部 — 禁止实现、禁止初始化、禁止写 UI
 
 ### 2.5 Dev-S1 出口标准 (全部满足才进 S2)
 
-- [ ] F5 运行, 无报错, 显示 Lv1 小木屋
-- [ ] 点升级 → 冷却 30 秒 → Lv2 加固木屋 (名称/数值随 CONF 变化)
-- [ ] 连升到 Lv3, 满级后升级按钮正确禁用
-- [ ] 保存 → 关游戏 → 读档, 等级/冷却一致
-- [ ] 改坏 `shelter_levels.conf` (如删掉 [level.2]) → 启动输出 CONFIG ERROR 并终止, 不静默
-- [ ] `system.conf` 中任一 OFF 系统未被初始化 (零初始化验证)
+- [ ] F5 运行, 无报错, 显示 Lv1 小木屋  ← 待用户人工确认
+- [x] 点升级 → 冷却 30 秒 → Lv2 加固木屋 (名称/数值随 CONF 变化)  ← autotest
+- [x] 连升到 Lv3, 满级后升级按钮正确禁用  ← autotest
+- [x] 保存 → 关游戏 → 读档, 等级/冷却一致  ← autotest
+- [ ] 改坏 `shelter_levels.conf` (如删掉 [level.2]) → 启动输出 CONFIG ERROR 并终止, 不静默  ← 待补负向测试
+- [x] `system.conf` 中任一 OFF 系统未被初始化 (零初始化验证)  ← autotest
+
+自动回归入口: `tests/dev_s1_autotest.tscn` (23 项) + `dev_s1_navtest.tscn` (5 项跳转) +
+`dev_s1_settest.tscn` (11 项设置面板), headless 运行, 命令见 `.claude/skills/test/SKILL.md`。
 
 ## 3. Dev-S2 野外物资 + 资源 + 基础建筑
 
@@ -178,7 +184,20 @@ OFF: 其余全部 — 禁止实现、禁止初始化、禁止写 UI
 - 休眠字段/休眠 CONF: 所属系统 OFF 时忽略, 不许提前实现其玩法
 - power 是流转型资源 (S2 起, 实时产需结算), 不参与交易
 - 修改 CONF 后必须重启才生效 (启动期加载, 运行期只读缓存)
-- S1 临时升级冷却 30 秒是**临时常量**, S2 起必须废弃并改由 CONF 驱动
+- S1 临时升级冷却 30 秒是**临时常量** (shelter_system.gd TEMP_UPGRADE_COOLDOWN_REAL_SECONDS), S2 起必须废弃并改由 CONF 驱动
+
+### Godot 4.7 引擎坑 (写 GDScript 必看)
+
+- Godot `ConfigFile` **不接受不带引号的字符串** (`schema = system` 直接解析失败) →
+  所以 ConfigManager 自写原始解析器 (§12.3)
+- **类型推断告警按编译错误**: `var x := dict.get(...)` 失败 → 显式类型 `var x: String = str(...)`
+- 局部变量 `name` 遮蔽 Node.name 报错; `get_node()` 赋子类要 `as Xxx`
+- FileAccess 没有 `get_reached_end()` → 用 `get_as_text().split("\n")`
+- `_ready` 里 `add_child()` 被拒 → `add_child.call_deferred` + `await get_tree().process_frame`
+- StyleBoxTexture 无 `modulate` 属性
+- 新增 class_name / 图片 / 音频资源后, 必须先跑 `godot --headless --import` 再跑测试,
+  否则 class_name 解析失败 / load 失败
+- 测试场景把自己移出 current_scene (`get_tree().current_scene = null`) 防 change_scene 释放测试根
 
 ## 11. 交付物定义
 
@@ -204,13 +223,18 @@ game/                      ← project.godot 就放这里 (工程根)
 ### 12.2 启动流 (对齐 SPEC PART T)
 
 ```text
-project.godot 启动
-→ autoload 就绪 (ConfigManager 最先)
-→ Boot.tscn: ConfigManager.load("res://configs/system.conf") → 校验
-→ 按开关初始化 System (禁用系统零初始化)
-→ SaveManager 读档或新建
-→ 切 Main.tscn (UI 按开关挂载)
+project.godot 启动 (run/main_scene = src/scenes/boot.tscn)
+→ autoload 就绪 (ConfigManager 最先, 再 TimeManager/SaveManager)
+→ boot.tscn: ConfigManager.load_all() 解析+校验依赖
+   → 失败: printerr("CONFIG ERROR: ...") + quit(1) 终止, 不静默
+→ 按开关初始化 System (挂 /root 常驻, 禁用系统零初始化)
+→ change_scene → login.tscn (新游戏 = ShelterSystem.new_game()+TimeManager.new_game();
+   读档 = set_state 恢复)
+→ change_scene → main.tscn (纯 UI 壳, 读 System 状态渲染)
 ```
+
+实现现状: boot.gd / login.gd / main.gd。System 状态跨场景存活 (挂 /root), 场景切换
+用 `get_tree().change_scene_to_file()`, 场景间零耦合。
 
 ### 12.3 CONF 读取约定
 
@@ -296,6 +320,13 @@ assets/
   是**同一构图的五段演变**(建筑变多变好), 不是 5 张无关的图; S1 只需前 2 张 (覆盖 Lv1~Lv3)
 - S1 **不需要**: 建筑图标、资源图标、敌人/地图素材 (S2 起才要)
 - 没拿到正式图前, 全部可用 ui_icon_placeholder.svg + 纯色块顶着跑, 不阻塞开发
+
+**占位图现行约定 (用户定稿, 优先于上表文件名)**: 缺图处放 `blank_XX_宽x高.png` 纯色占位
+(背景类 1920×1080, 如 `blank_login_1920x1080.png` / `blank_lv1~3_1920x1080.png`), 用户后续
+**直接覆盖同名文件**填实际 UI 资源, 代码零改动。主场景背景按庇护所等级自动换景
+(main.gd `_level_bg_texture()`: `blank_lv%d_1920x1080.png`, 缺文件回退 lv1)。
+**按钮例外**: 用真实图 `assets/ui/btn_primary.png`(+_hover/_pressed), 9-slice 由
+button_skin.gd 处理, 不放 blank。新增图片资源后必须先 `godot --headless --import`。
 
 ### 13.6 音频素材格式/尺寸总规范
 
