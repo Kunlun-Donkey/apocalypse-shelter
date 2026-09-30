@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://bx7ot0mn61g4t"
+path="res://.godot/imported/sfx_sounds_powerup16.wav-dfb66aa51442f2694b228fd472f14e77.sample"
+
+[deps]
+
+source_file="res://thirdpart/open-game-sfx-index/oga-512-retro/The Essential Retro Video Game Sound Effects Collection [512 sounds] By Juhani Junkala/General Sounds/Positive Sounds/sfx_sounds_powerup16.wav"
+dest_files=["res://.godot/imported/sfx_sounds_powerup16.wav-dfb66aa51442f2694b228fd472f14e77.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

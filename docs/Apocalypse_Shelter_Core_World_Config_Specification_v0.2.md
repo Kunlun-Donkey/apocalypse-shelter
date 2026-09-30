@@ -464,18 +464,18 @@ CONFIG WARN : building.farm [level.4] missing visual_stage, default used.
 
 | 等级 | 名称 | 人口 | 建筑槽 | 防御 | 生产加成 | 解锁建筑 | 解锁区域 | 解锁系统 |
 |---|---|---|---|---|---|---|---|---|
-| 1 | 废弃哨站 | 5 | 4 | 10 | 0% | generator, warehouse, lumber_yard, water_collector | — | — |
-| 2 | 修补营地 | 10 | 6 | 25 | 5% | farm, salvage_workshop | 城郊 | — |
-| 3 | 前哨聚落 | 20 | 8 | 50 | 10% | workshop, dormitory | 城市废墟入口 | — |
-| 4 | 铁壁据点 | 30 | 10 | 90 | 15% | watchtower, wall, clinic | 工业区边缘 | defense |
-| 5 | 自给城镇 | 45 | 12 | 140 | 20% | greenhouse, water_purifier, radio_tower | 农村/森林 | trade, merchant |
-| 6 | 要塞雏形 | 60 | 14 | 200 | 25% | lab, solar_array | 山区 | technology |
-| 7 | 区域强权 | 80 | 16 | 280 | 30% | 军用级建筑 | 军事区 | combat 装备链 |
-| 8 | 末世城邦 | 100 | 18 | 380 | 35% | 稀有生产线 | 感染区外围 | story 章节 3 |
+| 1 | 小木屋 | 5 | 4 | 10 | 0% | generator, warehouse, lumber_yard, water_collector | — | npc |
+| 2 | 加固木屋 | 10 | 6 | 25 | 5% | farm, salvage_workshop | 城郊 | — |
+| 3 | 修补营地 | 20 | 8 | 50 | 10% | workshop, dormitory | 城市废墟入口 | survivor |
+| 4 | 围墙营地 | 30 | 10 | 90 | 15% | watchtower, wall, clinic | 工业区边缘 | defense |
+| 5 | 铁皮聚落 | 45 | 12 | 140 | 20% | greenhouse, water_purifier, radio_tower | 农村/森林 | trade, merchant |
+| 6 | 铁壁据点 | 60 | 14 | 200 | 25% | lab, solar_array | 山区 | technology |
+| 7 | 要塞雏形 | 80 | 16 | 280 | 30% | 军用级建筑 | 军事区 | combat 装备链 |
+| 8 | 坚固要塞 | 100 | 18 | 380 | 35% | 稀有生产线 | 感染区外围 | story 章节 3 |
 | 9 | 钢铁之心 | 125 | 20 | 500 | 40% | 终局建筑 I | 感染区 | — |
 | 10 | 黎明之光 | 150 | 22 | 650 | 45% | 终局建筑 II | 禁区入口 | — |
 | 11 | 人类灯塔 | 180 | 24 | 850 | 50% | 终局建筑 III | 禁区 | — |
-| 12 | 末世丰碑 | 220 | 26 | 1100 | 60% | 全解锁 | 全图 | 结局 |
+| 12 | 超级堡垒 | 220 | 26 | 1100 | 60% | 全解锁 | 全图 | 结局 |
 
 ## G2 每级数据结构 (shelter_levels schema)
 
@@ -617,6 +617,20 @@ npcs/merchant_01.conf
 ```
 
 新增 NPC = 新增 `npcs/xxx.conf` + registry 登记。
+
+### I3 同伴类型体系 (开局四选一, [passive] 扩展)
+
+开局第一位同伴从 4 种类型中**四选一** (`shelter.conf starter_npcs`), 类型决定被动效果;
+其余三种可在游戏过程中招募 (重复可玩性)。`[passive]` 为 npc schema 扩展块:
+
+| npc_type | 类型 | 被动效果字段 | 效果 |
+|---|---|---|---|
+| `combat` | 战斗类 (守护) | defense_bonus, defense_reward_bonus[] | 守护庇护所 +防御; 保卫战胜利额外掉落特殊资源 (medicine/rare_alloy) |
+| `production` | 资源加成类 | production_bonus_percent | 庇护所资源产量提升 |
+| `companion` | 陪伴类 (美女/帅哥) | energy_recover_bonus_percent, explore_attempts_bonus | 主角精力恢复加快 → 每日可探索更多次 |
+| `steward` | 管家类 | population_growth_bonus_percent | 加快庇护所聚集居民 (人口增长提速) |
+
+开局四人组: `npc.guard_01 铁牛` / `npc.gatherer_01 老葛` / `npc.companion_01 苏晚` / `npc.steward_01 陈姨`。
 
 ---
 
@@ -844,6 +858,23 @@ unlock = quest.main_02
 1 游戏小时 = real_seconds_per_game_hour (默认 60 现实秒)
 阶段: Day (06:00-19:00) / Night (19:00-06:00)
 ```
+
+### 时间流速与开局留存节奏 (对齐 Steam 2h 退款窗口)
+
+游戏时间本质是**加速**的: 1 现实分钟 = 1 游戏时 → 1 现实小时 ≈ 2.5 游戏天 →
+**2~3 现实小时 = 5~7 游戏天**。开局节奏表 (防止 2 小时退款):
+
+| 现实时间 | 游戏内 | 玩家经历 |
+|---|---|---|
+| 0~10 分钟 | Day 1 清晨 | 核心绑定 VO, 四选一同伴, 建造启动 |
+| ~30 分钟 | Day 1 深夜~Day 2 | Lv2 加固木屋 (第 1 次视觉变化), 农场/回收站, 城郊解锁 |
+| ~60~75 分钟 | Day 2~3 | 昼夜已轮转 2 轮, 搜刮循环成型, 钢墙推进 |
+| ~100~120 分钟 | Day 4~5 | Lv3 修补营地 (第 2 次视觉变化), survivor 解锁, 城市废墟入口 —— "故事刚开始"钩子 |
+
+设计要求:
+- **Lv3 必须在 ~100 分钟内可达** —— 退款线前完成第 2 次大升级, 留下"想看 Lv4"的悬念
+- 加速感要**被看见**: UI 显示游戏时钟/日期; 昼夜光照/色调轮转 (廉价高效); 每游戏日一次小结算 (upkeep/日报)
+- `real_seconds_per_game_hour` 是唯一时间倍率旋钮, 调留存节奏只动它, 不动各系统数值
 
 受影响系统: production (生产结算)、exploration (搜索时间/风险)、event (权重)、enemy (夜间仇恨)、weather (切换)。
 

@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://cvpukxplll8fy"
+path="res://.godot/imported/high_down.ogg-fc46663085d4d1a6242002485bee14df.oggvorbisstr"
+
+[deps]
+
+source_file="res://thirdpart/kenney-digital-audio/addons/kenney digital audio/high_down.ogg"
+dest_files=["res://.godot/imported/high_down.ogg-fc46663085d4d1a6242002485bee14df.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://bp6cul6rgmt1u"
+path="res://.godot/imported/metal_pot_3.ogg-dbbcdec80b2cc6ffd60307836cf9867a.oggvorbisstr"
+
+[deps]
+
+source_file="res://thirdpart/kenney-rpg-audio/addons/kenney rpg audio/metal_pot_3.ogg"
+dest_files=["res://.godot/imported/metal_pot_3.ogg-dbbcdec80b2cc6ffd60307836cf9867a.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

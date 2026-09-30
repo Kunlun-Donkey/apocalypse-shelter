@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://k0ywgkd0vddm"
+path="res://.godot/imported/swing2.wav-e3648d867163474884c02818f0bdfc44.sample"
+
+[deps]
+
+source_file="res://thirdpart/open-game-sfx-index/oga-rpg-pack/RPG Sound Pack/battle/swing2.wav"
+dest_files=["res://.godot/imported/swing2.wav-e3648d867163474884c02818f0bdfc44.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://cq8so812vnrtw"
+path="res://.godot/imported/door_open_2.ogg-838b9979c670b30ba6f62a1ffab45039.oggvorbisstr"
+
+[deps]
+
+source_file="res://thirdpart/kenney-rpg-audio/addons/kenney rpg audio/door_open_2.ogg"
+dest_files=["res://.godot/imported/door_open_2.ogg-838b9979c670b30ba6f62a1ffab45039.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

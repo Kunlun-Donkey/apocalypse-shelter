@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://djfp1x43mw17u"
+path="res://.godot/imported/shade1.wav-4a4c36837aeca7a5e1d8519fed37e7e0.sample"
+
+[deps]
+
+source_file="res://thirdpart/open-game-sfx-index/oga-rpg-pack/RPG Sound Pack/NPC/shade/shade1.wav"
+dest_files=["res://.godot/imported/shade1.wav-4a4c36837aeca7a5e1d8519fed37e7e0.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

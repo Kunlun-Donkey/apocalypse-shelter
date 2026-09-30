@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://cxhb0aj5u86wy"
+path="res://.godot/imported/phase_jump_2.ogg-b4c3cffc1b09b91f1db837ff1a9551ee.oggvorbisstr"
+
+[deps]
+
+source_file="res://thirdpart/kenney-digital-audio/addons/kenney digital audio/phase_jump_2.ogg"
+dest_files=["res://.godot/imported/phase_jump_2.ogg-b4c3cffc1b09b91f1db837ff1a9551ee.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

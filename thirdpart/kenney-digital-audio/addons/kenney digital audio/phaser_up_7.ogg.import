@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://cs4s3nv1kp5jj"
+path="res://.godot/imported/phaser_up_7.ogg-d0cd94e7f5385c9be1313e690cebacea.oggvorbisstr"
+
+[deps]
+
+source_file="res://thirdpart/kenney-digital-audio/addons/kenney digital audio/phaser_up_7.ogg"
+dest_files=["res://.godot/imported/phaser_up_7.ogg-d0cd94e7f5385c9be1313e690cebacea.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://bsjd3c3y1xqwc"
+path="res://.godot/imported/sfx_vehicle_engineloop.wav-0facecf38c8e39b477b2faeddab38afe.sample"
+
+[deps]
+
+source_file="res://thirdpart/open-game-sfx-index/oga-512-retro/The Essential Retro Video Game Sound Effects Collection [512 sounds] By Juhani Junkala/Movement/Vehicles/sfx_vehicle_engineloop.wav"
+dest_files=["res://.godot/imported/sfx_vehicle_engineloop.wav-0facecf38c8e39b477b2faeddab38afe.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

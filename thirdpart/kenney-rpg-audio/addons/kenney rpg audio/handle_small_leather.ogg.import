@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://bybjaxb0t8v6c"
+path="res://.godot/imported/handle_small_leather.ogg-00b218e7fa0536183156cda3181ce4cc.oggvorbisstr"
+
+[deps]
+
+source_file="res://thirdpart/kenney-rpg-audio/addons/kenney rpg audio/handle_small_leather.ogg"
+dest_files=["res://.godot/imported/handle_small_leather.ogg-00b218e7fa0536183156cda3181ce4cc.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

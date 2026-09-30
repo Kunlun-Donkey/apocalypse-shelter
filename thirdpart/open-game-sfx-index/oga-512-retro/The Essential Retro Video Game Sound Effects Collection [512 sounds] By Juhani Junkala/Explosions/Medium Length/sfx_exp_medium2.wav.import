@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://cps1kvsyarmut"
+path="res://.godot/imported/sfx_exp_medium2.wav-8b4b6d60cb121b9af53bfc0c093cdfbc.sample"
+
+[deps]
+
+source_file="res://thirdpart/open-game-sfx-index/oga-512-retro/The Essential Retro Video Game Sound Effects Collection [512 sounds] By Juhani Junkala/Explosions/Medium Length/sfx_exp_medium2.wav"
+dest_files=["res://.godot/imported/sfx_exp_medium2.wav-8b4b6d60cb121b9af53bfc0c093cdfbc.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://b7sxu40jftbyy"
+path="res://.godot/imported/zap_two_tone.ogg-71da930f2fd6888e48077c8a1e68800d.oggvorbisstr"
+
+[deps]
+
+source_file="res://thirdpart/kenney-digital-audio/addons/kenney digital audio/zap_two_tone.ogg"
+dest_files=["res://.godot/imported/zap_two_tone.ogg-71da930f2fd6888e48077c8a1e68800d.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

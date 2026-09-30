@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://d4ljl2rurbrgn"
+path="res://.godot/imported/knife_slice.ogg-1c1afb8dc9a37eff5479ecd28f6780f9.oggvorbisstr"
+
+[deps]
+
+source_file="res://thirdpart/kenney-rpg-audio/addons/kenney rpg audio/knife_slice.ogg"
+dest_files=["res://.godot/imported/knife_slice.ogg-1c1afb8dc9a37eff5479ecd28f6780f9.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

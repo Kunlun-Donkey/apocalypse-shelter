@@ -1,0 +1,30 @@
+; Engine configuration file.
+; Apocalypse Shelter (末日庇护所) — Godot 4.7.x (Win/Linux 同版本号)
+; 布局见 AGENTS.md §12.1; 启动流见 §12.2 (Boot → ConfigManager 校验 → Main)
+
+config_version=5
+
+[application]
+
+config/name="末日庇护所"
+run/main_scene="res://src/scenes/boot.tscn"
+config/features=PackedStringArray("4.7")
+config/icon="res://icon.svg"
+
+[autoload]
+
+ConfigManager="*res://src/core/config_manager.gd"
+TimeManager="*res://src/core/time_manager.gd"
+SaveManager="*res://src/core/save_manager.gd"
+
+[display]
+
+window/size/viewport_width=1920
+window/size/viewport_height=1080
+window/stretch/mode="canvas_items"
+window/stretch/aspect="keep"
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"

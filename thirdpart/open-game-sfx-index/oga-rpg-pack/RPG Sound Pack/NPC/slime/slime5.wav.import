@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://bpxk2uh76jnr0"
+path="res://.godot/imported/slime5.wav-d7c8469e70978b8517de070b9ac7f98a.sample"
+
+[deps]
+
+source_file="res://thirdpart/open-game-sfx-index/oga-rpg-pack/RPG Sound Pack/NPC/slime/slime5.wav"
+dest_files=["res://.godot/imported/slime5.wav-d7c8469e70978b8517de070b9ac7f98a.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

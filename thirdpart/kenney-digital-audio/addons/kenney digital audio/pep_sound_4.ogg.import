@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://byttha8w2pwru"
+path="res://.godot/imported/pep_sound_4.ogg-6169266bd319784e35171098837dbd9a.oggvorbisstr"
+
+[deps]
+
+source_file="res://thirdpart/kenney-digital-audio/addons/kenney digital audio/pep_sound_4.ogg"
+dest_files=["res://.godot/imported/pep_sound_4.ogg-6169266bd319784e35171098837dbd9a.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

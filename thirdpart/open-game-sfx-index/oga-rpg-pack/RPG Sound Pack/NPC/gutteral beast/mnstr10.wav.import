@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://c4wo6hbahx4a6"
+path="res://.godot/imported/mnstr10.wav-e94b1fba0a2ce4c5e7b27b43d0983497.sample"
+
+[deps]
+
+source_file="res://thirdpart/open-game-sfx-index/oga-rpg-pack/RPG Sound Pack/NPC/gutteral beast/mnstr10.wav"
+dest_files=["res://.godot/imported/mnstr10.wav-e94b1fba0a2ce4c5e7b27b43d0983497.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

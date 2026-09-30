@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://r2mkt8gemlkp"
+path="res://.godot/imported/giant4.wav-48a76c9bd205ea73a23e46e2beabafed.sample"
+
+[deps]
+
+source_file="res://thirdpart/open-game-sfx-index/oga-rpg-pack/RPG Sound Pack/NPC/giant/giant4.wav"
+dest_files=["res://.godot/imported/giant4.wav-48a76c9bd205ea73a23e46e2beabafed.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2
