@@ -1,0 +1,8 @@
+# Godot 4 引擎生成目录 (提交工程文件, 不提交缓存)
+.godot/
+
+# 系统/编辑器杂项
+*.tmp
+*.log
+.DS_Store
+Thumbs.db
