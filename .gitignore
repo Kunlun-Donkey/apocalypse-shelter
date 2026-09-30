@@ -1,6 +1,9 @@
 # Godot 4 引擎生成目录 (提交工程文件, 不提交缓存)
 .godot/
 
+# Claude Code 本地配置
+.claude/
+
 # 系统/编辑器杂项
 *.tmp
 *.log
