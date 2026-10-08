@@ -15,6 +15,7 @@ const INTERIOR_SCENE := "res://src/scenes/shelter_interior.tscn"
 const WEATHERS := ["晴", "多云", "小雨", "雾"]
 const DAY_ICON := "res://assets/hud/day_icon.png"
 const NIGHT_ICON := "res://assets/hud/night_icon.png"
+const HOUSE_ICON := "res://assets/hud/house_icon.svg"
 const DAY_START_HOUR := 6.0
 const DAY_END_HOUR := 18.0
 
@@ -31,6 +32,7 @@ var _weather_label: Label
 var _day_night_icon: TextureRect
 var _day_texture: Texture2D
 var _night_texture: Texture2D
+var _house_button: Button
 
 
 func _ready() -> void:
@@ -84,6 +86,8 @@ func _build_ui() -> void:
 	_level_label.add_theme_font_size_override("font_size", 28)
 	_level_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	hud_row.add_child(_level_label)
+
+	_build_house_button(hud_row)
 
 	_build_day_night_icon(hud_row)
 
@@ -294,6 +298,29 @@ func _load_icon(path: String) -> Texture2D:
 	return load(path) as Texture2D
 
 
+# 房子图标按钮: 点击向下展开庇护所状态面板 (生命/攻击/防御/恢复, 逻辑书 B4.3)
+func _build_house_button(parent: Node) -> void:
+	_house_button = Button.new()
+	_house_button.name = "HouseButton"
+	_house_button.custom_minimum_size = Vector2(56, 48)
+	_house_button.tooltip_text = "庇护所状态"
+	_house_button.icon = _load_icon(HOUSE_ICON)
+	if _house_button.icon != null:
+		_house_button.expand_icon = true
+	else:
+		_house_button.text = "房屋"  # 缺图回退, 不崩
+	var hover_style := StyleBoxFlat.new()
+	hover_style.bg_color = Color(1, 1, 1, 0.08)
+	hover_style.corner_radius_top_left = 8
+	hover_style.corner_radius_top_right = 8
+	hover_style.corner_radius_bottom_left = 8
+	hover_style.corner_radius_bottom_right = 8
+	_house_button.add_theme_stylebox_override("hover", hover_style)
+	_house_button.add_theme_stylebox_override("pressed", hover_style)
+	_house_button.pressed.connect(_on_house_pressed)
+	parent.add_child(_house_button)
+
+
 func _weather_text() -> String:
 	return "天气: %s" % WEATHERS[(TimeManager.get_game_day() - 1) % WEATHERS.size()]
 
@@ -360,6 +387,10 @@ func _on_task_pressed() -> void:
 
 func _on_settings_pressed() -> void:
 	SettingsOverlay.open(self, true)
+
+
+func _on_house_pressed() -> void:
+	ShelterStatusPanel.toggle(self, _house_button)
 
 
 func _on_enter_shelter_pressed() -> void:

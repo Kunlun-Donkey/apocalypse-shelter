@@ -425,7 +425,8 @@ func _parse_level(path: String, section: String) -> Dictionary:
 		return {}
 	for required in [
 		"population_cap", "building_slots", "storage_bonus",
-		"production_bonus_percent", "defense", "requirements_shelter_level",
+		"production_bonus_percent", "defense", "hp_max", "attack", "recovery",
+		"requirements_shelter_level",
 	]:
 		if not s.has(required):
 			_error = "MissingData: %s [%s] missing %s" % [path, section, required]
@@ -439,6 +440,9 @@ func _parse_level(path: String, section: String) -> Dictionary:
 		"storage_bonus": _parse_int(s.get("storage_bonus", ""), 0),
 		"production_bonus_percent": _parse_float(s.get("production_bonus_percent", ""), 0.0),
 		"defense": _parse_int(s.get("defense", ""), 0),
+		"hp_max": _parse_int(s.get("hp_max", ""), 0),
+		"attack": _parse_int(s.get("attack", ""), 0),
+		"recovery": _parse_int(s.get("recovery", ""), 0),
 		"requirements_shelter_level": _parse_int(s.get("requirements_shelter_level", ""), 0),
 		# 休眠字段 (S2 起生效), 原样解析备用
 		"income_wood_per_hour": _parse_float(s.get("income_wood_per_hour", ""), 0.0),

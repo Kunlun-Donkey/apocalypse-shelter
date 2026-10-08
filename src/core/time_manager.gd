@@ -6,6 +6,9 @@ extends Node
 # 升级冷却不走本时钟 (用现实秒, 见 shelter_system.gd)
 # ============================================================
 
+# 每跨过 1 个游戏小时 emit (floor(game_hours) 跨界); 读档/开局不补发
+signal game_hour_elapsed(hour_index: int)
+
 const NEW_GAME_START_HOUR := 8.0  # 新开局: 第 1 天 08:00
 
 var game_hours: float = NEW_GAME_START_HOUR
@@ -14,7 +17,11 @@ var game_hours: float = NEW_GAME_START_HOUR
 func _process(delta: float) -> void:
 	# 倍率从 ConfigManager 实时读取 (Boot 在 autoload _ready 之后才加载配置)
 	var rate := ConfigManager.get_engine_real_seconds_per_game_hour()
+	var before_hour: int = floori(game_hours)
 	game_hours += delta / rate
+	var after_hour: int = floori(game_hours)
+	if after_hour > before_hour:
+		game_hour_elapsed.emit(after_hour)
 
 
 func new_game() -> void:

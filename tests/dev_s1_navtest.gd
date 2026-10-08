@@ -127,6 +127,53 @@ func _run() -> void:
 		icon_ok = (icon.texture as Texture2D).resource_path.ends_with("night_icon.png")
 	_check(icon_ok, "22:00 切换夜晚图标 night_icon.png")
 
+	# ---- 庇护所状态面板: HouseButton 下拉 (生命/攻击/防御/恢复, 逻辑书 B4.3) ----
+	var house := _find_by_name(scene, "HouseButton") as Button
+	_check(house != null, "顶部存在房子按钮 HouseButton")
+	_check(_find_by_name(scene, "ShelterStatusPanel") == null, "状态面板默认不建 (点击才展开)")
+	var panel_ok := house != null
+	if panel_ok:
+		house.pressed.emit()
+		await get_tree().process_frame
+		panel_ok = _find_by_name(scene, "ShelterStatusPanel") != null
+	_check(panel_ok, "点 HouseButton 展开 ShelterStatusPanel")
+	var s_title := _find_by_name(scene, "StatusTitle") as Label
+	_check(s_title != null and s_title.text == "小木屋 · Lv1", "StatusTitle = 小木屋 · Lv1")
+	var s_hp_bar := _find_by_name(scene, "StatusHpBar") as ProgressBar
+	_check(s_hp_bar != null and s_hp_bar.value == 100.0 and s_hp_bar.max_value == 100.0, "StatusHpBar = 100/100")
+	var s_hp_val := _find_by_name(scene, "StatusHpValue") as Label
+	_check(s_hp_val != null and s_hp_val.text == "100/100", "StatusHpValue = 100/100")
+	var s_atk := _find_by_name(scene, "StatusAttackValue") as Label
+	_check(s_atk != null and s_atk.text == "基础 2 + 建筑 0", "StatusAttackValue = 基础 2 + 建筑 0")
+	var s_def := _find_by_name(scene, "StatusDefenseValue") as Label
+	_check(s_def != null and s_def.text == "基础 10 + 建筑 0", "StatusDefenseValue = 基础 10 + 建筑 0")
+	var s_rec := _find_by_name(scene, "StatusRecoveryValue") as Label
+	_check(s_rec != null and s_rec.text == "2 / 游戏时", "StatusRecoveryValue = 2 / 游戏时")
+
+	# 关闭: 点 DismissCatcher → 重开 → Esc (两布尔合并一条, 照 inttest 手法)
+	var s_click := InputEventMouseButton.new()
+	s_click.button_index = MOUSE_BUTTON_LEFT
+	s_click.pressed = true
+	var catcher := _find_by_name(scene, "DismissCatcher") as Control
+	var close_ok := catcher != null
+	if close_ok:
+		catcher.gui_input.emit(s_click)
+		await get_tree().process_frame
+		close_ok = _find_by_name(scene, "StatusBox") == null
+	if close_ok and house != null:
+		house.pressed.emit()
+		await get_tree().process_frame
+		var s_panel: Node = _find_by_name(scene, "ShelterStatusPanel")
+		close_ok = s_panel != null
+		if close_ok:
+			var s_esc := InputEventKey.new()
+			s_esc.keycode = KEY_ESCAPE
+			s_esc.pressed = true
+			s_panel._unhandled_input(s_esc)
+			await get_tree().process_frame
+			close_ok = _find_by_name(scene, "StatusBox") == null
+	_check(close_ok, "DismissCatcher 点击关闭 + Esc 关闭 (ShelterStatusPanel)")
+
 	if _failed:
 		printerr("NAVTEST: FAILED")
 		get_tree().quit(1)

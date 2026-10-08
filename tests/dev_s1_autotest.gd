@@ -141,6 +141,91 @@ func _run() -> void:
 			"starter_npcs %s has_npc 且 recruit_allowed = true" % sid
 		)
 
+	# ---- 庇护所属性 hp_max/attack/defense/recovery + 生命状态 (逻辑书 B4.3) ----
+	# 冻结时钟: 本段含 31s 升级等待, 防止自然跨游戏小时触发回血干扰断言 (回血 tick 手动 emit 验证)
+	TimeManager.set_process(false)
+	# Lv1/2/3 属性 = CONF 值 (shelter_levels.conf)
+	var lv1: Dictionary = ConfigManager.get_shelter_level(1)
+	var lv2: Dictionary = ConfigManager.get_shelter_level(2)
+	var lv3: Dictionary = ConfigManager.get_shelter_level(3)
+	_check(
+		int(lv1.get("hp_max", -1)) == 100 and int(lv1.get("attack", -1)) == 2
+		and int(lv1.get("defense", -1)) == 10 and int(lv1.get("recovery", -1)) == 2,
+		"Lv1 属性 = hp_max 100 / attack 2 / defense 10 / recovery 2"
+	)
+	_check(
+		int(lv2.get("hp_max", -1)) == 200 and int(lv2.get("attack", -1)) == 5
+		and int(lv2.get("defense", -1)) == 25 and int(lv2.get("recovery", -1)) == 4,
+		"Lv2 属性 = hp_max 200 / attack 5 / defense 25 / recovery 4"
+	)
+	_check(
+		int(lv3.get("hp_max", -1)) == 350 and int(lv3.get("attack", -1)) == 10
+		and int(lv3.get("defense", -1)) == 50 and int(lv3.get("recovery", -1)) == 6,
+		"Lv3 属性 = hp_max 350 / attack 10 / defense 50 / recovery 6"
+	)
+
+	# 攻击/防御 = 基础 + 建筑 (建筑加成本期恒 0, S2/S3 接入)
+	_check(
+		shelter.get_attack() == shelter.get_attack_base() + shelter.get_building_attack_bonus()
+		and shelter.get_building_attack_bonus() == 0 and shelter.get_building_defense_bonus() == 0,
+		"get_attack == base + building_bonus (building 恒 0)"
+	)
+
+	# new_game 满血 / get_state 含 current_hp / set_state 往返
+	shelter.new_game()
+	_check(shelter.current_hp == shelter.get_hp_max(), "new_game → current_hp = hp_max 满血")
+	var hp_state: Dictionary = shelter.get_state()
+	_check(hp_state.has("current_hp"), "get_state 含 current_hp 字段")
+	hp_state["current_hp"] = 41
+	shelter.set_state(hp_state)
+	_check(shelter.current_hp == 41, "set_state 恢复 current_hp = 41")
+
+	# 旧档兼容 + clamp
+	shelter.set_state({"shelter_level": 1, "upgrading": false, "upgrade_cooldown_remaining": 0.0})
+	_check(shelter.current_hp == shelter.get_hp_max(), "旧档缺 current_hp → 默认满血")
+	shelter.set_state({"shelter_level": 1, "upgrading": false, "upgrade_cooldown_remaining": 0.0, "current_hp": 999})
+	_check(shelter.current_hp == shelter.get_hp_max(), "set_state current_hp=999 clamp 到 hp_max")
+	shelter.set_state({"shelter_level": 1, "upgrading": false, "upgrade_cooldown_remaining": 0.0, "current_hp": -5})
+	_check(shelter.current_hp == 0, "set_state current_hp=-5 clamp 到 0")
+
+	# apply_damage / heal + hp_changed 信号
+	var hp_signal: Array = []
+	shelter.hp_changed.connect(func(c: int, m: int) -> void: hp_signal.append([c, m]))
+	shelter.new_game()
+	hp_signal.clear()
+	shelter.apply_damage(30)
+	_check(
+		shelter.current_hp == 70 and hp_signal.size() == 1 and hp_signal[0][0] == 70,
+		"apply_damage(30) → 70 且 hp_changed 触发"
+	)
+	shelter.apply_damage(999)
+	_check(shelter.current_hp == 0, "apply_damage(999) → 0 (下限)")
+	shelter.heal(999)
+	_check(shelter.current_hp == shelter.get_hp_max(), "heal(999) → hp_max (上限)")
+
+	# 回血 tick: game_hour_elapsed → +recovery (满血不变)
+	shelter.apply_damage(50)
+	var before_recover: int = shelter.current_hp
+	TimeManager.game_hour_elapsed.emit(9)
+	_check(shelter.current_hp == before_recover + shelter.get_recovery(), "回血 tick: +recovery")
+	shelter.heal(999)
+	var full_hp: int = shelter.current_hp
+	TimeManager.game_hour_elapsed.emit(10)
+	_check(shelter.current_hp == full_hp, "满血回血 tick 不变 (封顶)")
+
+	# 升级 delta: current_hp += (新 max − 旧 max) (Lv1 血 50 → Lv2 后 150)
+	shelter.set_state({"shelter_level": 1, "upgrading": false, "upgrade_cooldown_remaining": 0.0, "current_hp": 50})
+	_check(shelter.current_hp == 50, "升级前 Lv1 current_hp = 50")
+	_check(shelter.start_upgrade(), "发起升级 Lv1→Lv2 (delta 测试)")
+	await get_tree().create_timer(ShelterSystem.TEMP_UPGRADE_COOLDOWN_REAL_SECONDS + 1.0).timeout
+	_check(
+		shelter.current_level == 2 and shelter.current_hp == 50 + (200 - 100),
+		"升级 delta: 50 + (200-100) = 150"
+	)
+	# 复位到 Lv3 满级, 不影响后续零初始化断言 (等级无关, 仅状态干净)
+	shelter.set_state({"shelter_level": 3, "upgrading": false, "upgrade_cooldown_remaining": 0.0})
+	TimeManager.set_process(true)
+
 	# ---- 零初始化验证: 根节点只挂了 ShelterSystem + NpcSystem 两个系统 ----
 	var system_nodes := 0
 	for child in get_tree().root.get_children():

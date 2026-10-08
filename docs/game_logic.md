@@ -108,23 +108,25 @@ V1 主线 Lv12+结局 ≈ 35~45h, 全成就 60h+; Lv3 须 ~100 分钟现实可�
 
 ### A3. 庇护所等级链 (12 级, 游戏灵魂)
 
-| Lv | 名称 | visual_stage | 人口 | 建筑槽 | 防御 | 产量加成 | 解锁建筑 | 解锁区域 | 解锁系统 |
-|---|---|---|---|---|---|---|---|---|---|
-| 1 | 小木屋 | cabin | 5 | 4 | 10 | 0% | generator, warehouse, lumber_yard, water_collector | — | npc |
-| 2 | 加固木屋 | cabin | 10 | 6 | 25 | 5% | farm, salvage_workshop | 城郊 | — |
-| 3 | 修补营地 | camp | 20 | 8 | 50 | 10% | workshop, dormitory | 城市废墟入口 | survivor |
-| 4 | 围墙营地 | camp | 30 | 10 | 90 | 15% | watchtower, wall, clinic | 工业区边缘 | defense |
-| 5 | 铁皮聚落 | outpost | 45 | 12 | 140 | 20% | greenhouse, water_purifier, radio_tower | 农村/森林 | trade, merchant |
-| 6 | 铁壁据点 | outpost | 60 | 14 | 200 | 25% | lab, solar_array | 山区 | technology |
-| 7 | 要塞雏形 | fortress | 80 | 16 | 280 | 30% | 军用级建筑 | 军事区 | combat 装备链 |
-| 8 | 坚固要塞 | fortress | 100 | 18 | 380 | 35% | 稀有生产线 | 感染区外围 | story 章节 3 |
-| 9 | 钢铁之心 | stronghold | 125 | 20 | 500 | 40% | 终局建筑 I | 感染区 | — |
-| 10 | 黎明之光 | stronghold | 150 | 22 | 650 | 45% | 终局建筑 II | 禁区入口 | — |
-| 11 | 人类灯塔 | stronghold | 180 | 24 | 850 | 50% | 终局建筑 III | 禁区 | — |
-| 12 | 超级堡垒 | stronghold | 220 | 26 | 1100 | 60% | 全解锁 | 全图 | 结局 |
+| Lv | 名称 | visual_stage | 人口 | 建筑槽 | 防御 | 产量加成 | 解锁建筑 | 解锁区域 | 解锁系统 | 生命上限 | 攻击 | 恢复 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 小木屋 | cabin | 5 | 4 | 10 | 0% | generator, warehouse, lumber_yard, water_collector | — | npc | 100 | 2 | 2 |
+| 2 | 加固木屋 | cabin | 10 | 6 | 25 | 5% | farm, salvage_workshop | 城郊 | — | 200 | 5 | 4 |
+| 3 | 修补营地 | camp | 20 | 8 | 50 | 10% | workshop, dormitory | 城市废墟入口 | survivor | 350 | 10 | 6 |
+| 4 | 围墙营地 | camp | 30 | 10 | 90 | 15% | watchtower, wall, clinic | 工业区边缘 | defense | — | — | — |
+| 5 | 铁皮聚落 | outpost | 45 | 12 | 140 | 20% | greenhouse, water_purifier, radio_tower | 农村/森林 | trade, merchant | — | — | — |
+| 6 | 铁壁据点 | outpost | 60 | 14 | 200 | 25% | lab, solar_array | 山区 | technology | — | — | — |
+| 7 | 要塞雏形 | fortress | 80 | 16 | 280 | 30% | 军用级建筑 | 军事区 | combat 装备链 | — | — | — |
+| 8 | 坚固要塞 | fortress | 100 | 18 | 380 | 35% | 稀有生产线 | 感染区外围 | story 章节 3 | — | — | — |
+| 9 | 钢铁之心 | stronghold | 125 | 20 | 500 | 40% | 终局建筑 I | 感染区 | — | — | — | — |
+| 10 | 黎明之光 | stronghold | 150 | 22 | 650 | 45% | 终局建筑 II | 禁区入口 | — | — | — | — |
+| 11 | 人类灯塔 | stronghold | 180 | 24 | 850 | 50% | 终局建筑 III | 禁区 | — | — | — | — |
+| 12 | 超级堡垒 | stronghold | 220 | 26 | 1100 | 60% | 全解锁 | 全图 | 结局 | — | — | — |
 
-- 数据源: `configs/shelter/shelter_levels.conf` 的 `[level.N]` (逐级追加, 无需改代码)
+- 数据源: `configs/shelter/shelter_levels.conf` 的 `[level.N]` (逐级追加, 无需改代码);
+  Lv4~12 的 生命上限/攻击/恢复 待写入 CONF
 - 每级生效字段: `population_cap / building_slots / storage_bonus / production_bonus_percent / defense` +
+  `hp_max / attack / recovery` +
   `income_* / unlocks_buildings / unlocks_systems / unlocks_locations` +
   `upgrade_cost_* / requirements_buildings / requirements_shelter_level`
 - 当前 MVP 上限 `mvp_max_level = 3` (shelter.conf), 满级后升级按钮禁用, 等待后续版本开放
@@ -136,6 +138,7 @@ V1 主线 Lv12+结局 ≈ 35~45h, 全成就 60h+; Lv3 须 ~100 分钟现实可�
 level.N:
   name / description / visual_stage
   population_cap / building_slots / storage_bonus / defense
+  hp_max / attack / recovery                          # 必填 int (生命上限/攻击/恢复)
   production_bonus_percent
   income_wood_per_hour / income_steel_per_hour      # 基础拾荒收入
   unlocks_buildings[] / unlocks_systems[] / unlocks_locations[]
@@ -161,6 +164,8 @@ Lv4~Lv12 在后续阶段以**追加 `[level.4]`~`[level.12]` 节**的方式加�
   校验 `requirements_buildings` (id:level 列表), 冷却改由 CONF 驱动
 - 状态机: `can_upgrade()` 判定 → `start_upgrade()` 进入升级中 → 冷却结束 `upgrade_completed`
   信号 → 等级+1, 数值按新级生效 (名称/数值全部随 CONF 变化)
+- **HP 并入**: 升级完成时 `current_hp += (新 hp_max − 旧 hp_max)` — 新增结构满血并入、
+  已损保留, **不自动加满**
 
 ### A5. 时间系统 (原 SPEC O1)
 
@@ -168,6 +173,8 @@ Lv4~Lv12 在后续阶段以**追加 `[level.4]`~`[level.12]` 节**的方式加�
 - 1 游戏日 = 24 游戏小时; 阶段: Day (06:00-19:00) / Night (19:00-06:00)
 - 开局 = **第 1 天 08:00**; 游戏时钟由 TimeManager 驱动; 升级冷却计时用**现实秒** (不走游戏时钟)
 - 新游戏/读档都会重置或恢复游戏时刻 (存档含 time 状态)
+- TimeManager 信号 **`game_hour_elapsed(hour_index)`**: `game_hours` 跨整小时时 emit
+  (读档/开局 `set_state`/`new_game` **不补发**); 庇护所恢复(回血)挂接在此 (见 B4.3)
 
 #### A5.1 时间流速与开局留存节奏 (对齐 Steam 2h 退款窗口)
 
@@ -322,7 +329,8 @@ fuel/medicine/electronics/rare_alloy 的 CONF 文件可在第 2 阶段加入 reg
 ### A8. 存读档
 
 - 3 个槽位: `user://save_slot_N.json` (JSON, `save_version=1`, `saved_at` 时间戳)
-- GameState = { shelter 等级 + 升级冷却计时, 游戏时刻 } (S2 起追加资源/建筑等)
+- GameState = { shelter 等级 + `current_hp` + 升级冷却计时, 游戏时刻 } (S2 起追加资源/建筑等);
+  **旧档缺 `current_hp` 字段时默认 = 当级 `hp_max`** (set_state 兼容)
 - **继续游戏** = 读最近存档 (按 `saved_at` 最大, SaveManager.find_latest_slot(), 无存档禁用)
 - 存档路径: Windows `%APPDATA%/Godot/app_userdata/<项目>/`, Linux `~/.local/share/godot/app_userdata/<项目>/`
 - **设置与存档分离**: 设置存 `user://settings.json`, 不进游戏存档
@@ -334,7 +342,7 @@ fuel/medicine/electronics/rare_alloy 的 CONF 文件可在第 2 阶段加入 reg
 |---|---|
 | 建筑定义/等级表 | 建筑实例: config_id + instance_id + current_level + 工作状态 |
 | 资源定义 | 资源数量、容量 |
-| 庇护所等级表 | 当前 shelter_level |
+| 庇护所等级表 | 当前 shelter_level + current_hp |
 | 事件定义 | 事件冷却计时、已触发标记 |
 | 时间规则 | 当前游戏时刻/天数 |
 
@@ -389,7 +397,7 @@ npcs/merchant_01.conf
 #### A9.3 同伴类型体系 (开局三选一, [passive] 扩展) (原 SPEC I3) — **已开启 (招募提前实施)**
 
 用户定稿 2026-10: 开局第一位同伴从 3 名候选中**三选一** (`shelter.conf starter_npcs`,
-玩家在招募面板**点整卡选定**, 见 B4.2), 类型决定被动/主动技能; 其余可在游戏过程中招募
+玩家在招募面板**点卡片招募按钮选定**, 见 B4.2), 类型决定被动/主动技能; 其余可在游戏过程中招募
 (重复可玩性)。`[passive]`/`[active]` 为 npc schema 扩展块:
 
 | NPC ID | 姓名 | npc_type | 属性 (体力/生存/智慧) | 被动 | 主动 |
@@ -408,8 +416,8 @@ npcs/merchant_01.conf
 - `system.conf npc = true` (依赖 npc = shelter 已满足), `src/systems/npc/npc_system.gd`
   (class_name NpcSystem) 挂 /root/NpcSystem; **招募状态单一数据源, 存 config_id 不存姓名**
   (姓名仅展示/旧档迁移, 遵守 ID 规范 `npc.medic_01` 等)
-- **三选一入队**: 点整卡选定 1 名 (`NpcSystem.recruit(id)`), **一次性锁定** (已选不可换),
-  系统层 + UI 层双重锁定; 本期 `team` 至多 1 人, 已有人再招直接拒绝
+- **三选一入队**: 点卡片底部招募按钮 `RecruitButton_N` 选定 1 名 (`NpcSystem.recruit(id)`),
+  **一次性锁定** (已选不可换), 系统层 + UI 层双重锁定; 本期 `team` 至多 1 人, 已有人再招直接拒绝
 - **被动技能数值查询 API**: `NpcSystem.get_passive_bonus(field)` 返回全队
   `passive.bonuses` 求和 (如 `food_gain_bonus_percent=20` / `casualty_reduce_percent=30`),
   供 S2+ 各系统消费; `get_active_skill_data(id)` **主动技能数据只读**, 本期不结算
@@ -702,6 +710,8 @@ boot.tscn → login.tscn → main.tscn ⇄ shelter_interior.tscn
    `initial_population`, 上限=等级 `population_cap`, survivor 系统开启后接管) +
    **天气面板 WeatherPanel** (`WeatherLabel`="天气: X", 按游戏日轮换 晴/多云/小雨/雾 占位,
    天气系统未开纯 UI 壳); 右侧 **等级标签 LevelLabel (`LvN 名称`)** +
+   **房子按钮 HouseButton** (房子图标 `assets/hud/house_icon.svg` 64×64, 点击展开
+   庇护所状态面板, 见 B4.3) +
    **日夜图标 DayNightIcon** (6:00~18:00 `day_icon.png` / 其余 `night_icon.png`,
    48×48 随游戏时刻切换) + 游戏时间标签 (TimeManager.get_time_text()) + 设置按钮
 2. **中央**: 底图 `assets/map/first_scene.png` (恒定世界图) + 庇护所图按等级换景
@@ -768,20 +778,51 @@ boot.tscn → login.tscn → main.tscn ⇄ shelter_interior.tscn
      **max=10 固定**, texture_under/texture_progress = bar_under/bar_fill.png 九宫格) + 数值
   6. `Desc_N` 背景描述 (小号多行 AUTOWRAP_WORD_SMART)
   7. `PassiveTitle_N`/`PassiveDesc_N` 被动技能 + `ActiveTitle_N`/`ActiveDesc_N` 主动技能
+  8. 卡底 `RecruitButton_N` 招募按钮 (点击入队该 NPC, 见下)
 - **样式**: 全锚点容器布局 (CenterContainer/Margin/VBox, 不写死坐标); 文本深棕
   (BROWN_DARK #4A2F14 / BROWN_TEXT) 适配木板废土风
 - **NPC 数据**: `btn_recruit.gd` 的 `NPC_DATA` 字典 = UI 展示源 (姓名/职业/熟悉度/属性/
   背景/被动/主动/钻石路径 + `id`), 改文案/换钻石只动字典; **CONF `npcs/*.conf` = 系统数据源**
   (NpcSystem 读), autotest 有两者一致性断言防漂移; 三人数据见 A9.3
-- **整卡点选 (开局 3 选 1)**: 规格卡片版式 ①~⑥ 封闭无选择按钮 → **点整卡选定**;
-  已选卡加深棕描边 (StyleBoxFlat 3px 边框); 点击走 `NpcSystem.recruit(id)` (存 config_id,
-  **一次性锁定**不可换, 本期 team≤1), 系统层 + UI 层双重锁定; `BtnRecruit` 静态 API
-  (get_picked/set_picked/...) = "姓名门面"委托 /root/NpcSystem (无系统时降级静态缓存);
-  新游戏 `NpcSystem.new_game()` + `BtnRecruit.reset()`
+- **招募按钮三选一 (用户定稿 2026-10 改版, 旧"整卡点选"废除)**: 每张卡片底部一个
+  **招募按钮** `RecruitButton_N`, 点击入队该 NPC (三选一, 一次性锁定); **整卡点击无效**。
+  点击走 `NpcSystem.recruit(id)` (存 config_id, **一次性锁定**不可换, 本期 team≤1),
+  系统层 + UI 层双重锁定; `BtnRecruit` 静态 API (get_picked/set_picked/...) = "姓名门面"
+  委托 /root/NpcSystem (无系统时降级静态缓存); 新游戏 `NpcSystem.new_game()` + `BtnRecruit.reset()`
+- **招募成功弹窗**: 招募成功 → 招募面板关闭 + 弹成功弹窗
+  (`RecruitSuccessPanel`/`RecruitSuccessLabel`/`RecruitSuccessOkButton`),
+  文案 "成功招募 XXX！可在庇护所内查看详细信息", 点确定后销毁
+- **锁定后重开面板**: 仍可查看三人资料; 已选卡加深棕描边 (StyleBoxFlat 3px 边框) +
+  按钮文字 "已招募", 三个按钮全禁用 (不可换人)
 - **持久化**: 存档快照主字段 `npc: {picked: config_id, team: [id]}` +
   镜像 `recruit: {picked: "<NPC姓名>"}` (旧档兼容, 保留一个版本), 保存/读档 (设置弹层
   game_menu + 登录读档弹层) 时写入/恢复; 读档优先 `npc`, 空则回退 `recruit.picked`
   (姓名经 set_state 自动映射回 id)
+
+### B4.3 庇护所状态面板 (ShelterStatusPanel, 房子按钮下拉)
+
+顶部 HUD 房子按钮 `HouseButton` (LevelLabel 与 DayNightIcon 之间) 点击向下展开
+"庇护所状态"面板 (挂 `src/ui/shelter_status_panel.gd`, class_name `ShelterStatusPanel`):
+
+- **形态**: **非模态下拉面板** (不遮挡全屏、不阻断主界面操作), 定位按钮右下, **460×330**
+- **节点契约** (测试用): `HouseButton` / `ShelterStatusPanel` / `DismissCatcher` (面板外点击捕获) /
+  `StatusBox` / `StatusTitle` (="小木屋 · Lv1") /
+  `StatusHpRow` / `StatusHpLabel` / `StatusHpBar` / `StatusHpValue` (="100/100") /
+  `StatusAttackRow` / `StatusAttackLabel` / `StatusAttackValue` (="基础 2 + 建筑 0") /
+  `StatusDefenseRow` / `StatusDefenseLabel` / `StatusDefenseValue` (="基础 10 + 建筑 0") /
+  `StatusRecoveryRow` / `StatusRecoveryLabel` / `StatusRecoveryValue` (="2 / 游戏时")
+- **四行显示** (数据全来自 ShelterSystem):
+  1. **生命**: HP 条 (`ProgressBar`, StyleBoxFlat 代码绘制) + "当前/上限" — 可扣可回
+  2. **攻击**: "基础 X + 建筑 Y" (建筑加成本期恒 0)
+  3. **防御**: "基础 X + 建筑 Y" (基础值 = 等级 `defense` 字段, 见 A3)
+  4. **恢复**: "N / 游戏时" (每游戏小时回血 N 点, 封顶 `hp_max`; 回血挂
+     TimeManager `game_hour_elapsed`, 见 A5)
+- **关闭三途径**: 点面板外 (`DismissCatcher`) / 再点房子按钮 / Esc
+- **数据来源/自刷新**: ShelterSystem (等级数值 + `current_hp`, 见 A8 存档), 监听
+  `hp_changed` + `level_changed` 信号自动刷新 (扣血/回血/升级即时更新)
+- **建筑加成占位**: `ShelterSystem.get_building_attack_bonus()` /
+  `get_building_defense_bonus()` 恒返回 0; S2/S3 建筑系统接入后生效
+  (箭塔/炮塔→攻击加成, 围栏/墙→防御加成)
 
 ### B5. shelter_interior.tscn (庇护所内部)
 
@@ -1095,7 +1136,7 @@ rewards / loot / risk / time / visual / audio
 |---|---|---|
 | resource | resources/ | category, rarity, flow_type, capacity, value_curve, sources |
 | shelter | shelter/ | levels_file, max_level, initial_state |
-| shelter_levels | shelter/ | population_cap, building_slots, storage_bonus, production_bonus_percent, defense, income_*, unlocks_*, upgrade_cost_*, requirements_* |
+| shelter_levels | shelter/ | population_cap, building_slots, storage_bonus, production_bonus_percent, defense, hp_max, attack, recovery, income_*, unlocks_*, upgrade_cost_*, requirements_* |
 | building | buildings/ | category, max_level, unlock_shelter_level, size, worker_requirement, dependencies, level.N |
 | survivor | survivors/ | profession, rarity, stats, skills, work_pref |
 | npc | npcs/ | identity, spawn_region, spawn_condition, functions, recruit_allowed, [passive]/[active] 技能块 |
@@ -1228,7 +1269,7 @@ location 系统为 OFF → dormant ref 告警; 第二阶段 `location = true` �
 |---|---|
 | 建筑定义/等级表 | 建筑实例: config_id + instance_id + current_level + 工作状态 |
 | 资源定义 | 资源数量、容量 |
-| 庇护所等级表 | 当前 shelter_level |
+| 庇护所等级表 | 当前 shelter_level + current_hp (旧档缺字段默认=当级 hp_max) |
 | 事件定义 | 事件冷却计时、已触发标记 |
 | 时间规则 | 当前游戏时刻/天数 |
 
