@@ -32,7 +32,7 @@ $GODOT --headless --path . res://tests/dev_s1_navtest.tscn
 # 11 项: 设置面板 (弹出/全屏/音量持久化/Esc 关闭)
 $GODOT --headless --path . res://tests/dev_s1_settest.tscn
 
-# 14 项: 主界面→庇护所内部导航 (进入按钮/房间面板/返回)
+# 35 项: 世界界面底部 6 按钮/占位提示/进入室内 (一房一床+升级冷却)/返回/设置游戏菜单
 $GODOT --headless --path . res://tests/dev_s1_inttest.tscn
 ```
 

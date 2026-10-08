@@ -1,10 +1,12 @@
 extends Node
 # ============================================================
-# 庇护所室内场景导航验证 (headless):
+# 世界/室内场景导航验证 (headless):
 #   godot --headless --path . res://tests/dev_s1_inttest.tscn
-# 覆盖: 登录"开始新游戏" → Main → "进入庇护所" → ShelterInterior
-#         → 室内节点齐全 (BackButton/RoomGrid/RoomPanel_1..5/RoomSummary)
-#         → BackButton 返回 Main
+# 覆盖: 登录"开始新游戏" → Main (顶部资源条/等级 + 底部 6 功能按钮)
+#       → 5 占位按钮提示 "后续版本开放: X"
+#       → "进入" → ShelterInterior (一房一床 RoomPanel_1/BedLabel + 升级区)
+#       → 室内升级 30s 冷却 → BackButton 返回 Main
+#       → 设置弹层 game_menu 段 (存读档 3 槽/返回标题)
 # ============================================================
 
 var _failed := false
@@ -35,6 +37,12 @@ func _find_by_name(node: Node, target: String) -> Node:
 func _abort() -> void:
 	printerr("INTTEST: FAILED")
 	get_tree().quit(1)
+
+
+func _settle() -> void:
+	await get_tree().process_frame
+	await get_tree().process_frame
+	await get_tree().process_frame
 
 
 func _run() -> void:
@@ -68,55 +76,123 @@ func _run() -> void:
 		return
 
 	new_game.pressed.emit()
-	await get_tree().process_frame
-	await get_tree().process_frame
-	await get_tree().process_frame
+	await _settle()
 
-	# 断言到达主界面 (能找到 UpgradeButton 即算到主界面)
+	# 断言到达主界面 (底部 任务 按钮为新锚点)
 	var main_scene := get_tree().current_scene
-	_check(main_scene != null and _find_by_name(main_scene, "UpgradeButton") != null, "点击后进入主界面 (存在 UpgradeButton)")
-	if main_scene == null or _find_by_name(main_scene, "UpgradeButton") == null:
+	var task_btn: Button = null
+	if main_scene != null:
+		task_btn = _find_by_name(main_scene, "TaskButton") as Button
+	_check(task_btn != null, "点击后进入主界面 (存在 TaskButton)")
+	if task_btn == null:
 		_abort()
 		return
 
-	# 主界面存在"进入庇护所"入口按钮
+	# 底部 6 功能按钮齐 (节点名 = 测试契约)
+	_check(_find_by_name(main_scene, "WarehouseButton") != null, "主界面存在 WarehouseButton (仓库)")
+	_check(_find_by_name(main_scene, "OutCityButton") != null, "主界面存在 OutCityButton (出城)")
+	_check(_find_by_name(main_scene, "ExploreButton") != null, "主界面存在 ExploreButton (探索)")
+	_check(_find_by_name(main_scene, "RecruitButton") != null, "主界面存在 RecruitButton (招募)")
 	var enter := _find_by_name(main_scene, "EnterShelterButton") as Button
-	_check(enter != null, "主界面存在 进入庇护所 按钮")
+	_check(enter != null and enter.text == "进入", "主界面存在 EnterShelterButton (text=进入)")
+	var level_label := _find_by_name(main_scene, "LevelLabel") as Label
+	_check(level_label != null and level_label.text.begins_with("Lv1"), "顶部 LevelLabel 显示 Lv1")
+
+	# 5 占位按钮点击 → StatusLabel "后续版本开放: X"
+	var placeholders: Array = [
+		["TaskButton", "任务"],
+		["WarehouseButton", "仓库"],
+		["OutCityButton", "出城"],
+		["ExploreButton", "探索"],
+		["RecruitButton", "招募"],
+	]
+	for item: Array in placeholders:
+		var btn := _find_by_name(main_scene, str(item[0])) as Button
+		var ok := btn != null
+		if ok:
+			btn.pressed.emit()
+			await get_tree().process_frame
+			var status := _find_by_name(main_scene, "StatusLabel") as Label
+			ok = status != null and status.text == "后续版本开放: %s" % str(item[1])
+		_check(ok, "点 %s 占位提示 '后续版本开放: %s'" % [str(item[1]), str(item[1])])
+
 	if enter == null:
 		_abort()
 		return
 
 	# 进入室内场景
 	enter.pressed.emit()
-	await get_tree().process_frame
-	await get_tree().process_frame
-	await get_tree().process_frame
+	await _settle()
 
 	var interior := get_tree().current_scene
-	_check(interior != null and interior.name == "ShelterInterior", "点击后 current_scene 切换到 ShelterInterior")
+	_check(interior != null and interior.name == "ShelterInterior", "点 进入 后 current_scene 切换到 ShelterInterior")
 	if interior == null or interior.name != "ShelterInterior":
 		_abort()
 		return
 
-	# 室内节点齐全
-	_check(_find_by_name(interior, "BackButton") != null, "室内存在 BackButton")
-	_check(_find_by_name(interior, "RoomGrid") != null, "室内存在 RoomGrid")
-	for i in range(1, 6):
-		_check(_find_by_name(interior, "RoomPanel_%d" % i) != null, "室内存在 RoomPanel_%d" % i)
-	_check(_find_by_name(interior, "RoomSummary") != null, "室内存在 RoomSummary")
+	# 室内: 一房一床极简
+	var room := _find_by_name(interior, "RoomPanel_1")
+	_check(room != null, "室内存在 RoomPanel_1 (卧室)")
+	_check(_find_by_name(interior, "RoomPanel_2") == null, "室内不再有 RoomPanel_2 (一房极简)")
+	var bed := _find_by_name(interior, "BedLabel") as Label
+	_check(bed != null and bed.text == "床 ×1", "室内 BedLabel = 床 ×1")
+
+	# 室内: 升级区 (自 main 迁入)
+	var upgrade := _find_by_name(interior, "UpgradeButton") as Button
+	_check(upgrade != null, "室内存在 UpgradeButton (升级只在室内)")
+	if upgrade == null:
+		_abort()
+		return
+	_check(_find_by_name(interior, "CooldownLabel") != null, "室内存在 CooldownLabel")
+	var upgrade_status := _find_by_name(interior, "UpgradeStatusLabel") as Label
+	_check(upgrade_status != null, "室内存在 UpgradeStatusLabel")
+
+	# 点升级 → 30s 现实冷却
+	upgrade.pressed.emit()
+	await _settle()
+	upgrade_status = _find_by_name(interior, "UpgradeStatusLabel") as Label
+	_check(upgrade_status != null and upgrade_status.text == "开始升级...", "点升级后提示 开始升级...")
+	upgrade = _find_by_name(interior, "UpgradeButton") as Button
+	_check(upgrade != null and upgrade.disabled, "升级中按钮禁用")
+	var cooldown := _find_by_name(interior, "CooldownLabel") as Label
+	_check(cooldown != null and cooldown.text.begins_with("升级中"), "冷却倒计时显示 升级中")
 
 	# BackButton 返回主界面
 	var back := _find_by_name(interior, "BackButton") as Button
+	_check(back != null, "室内存在 BackButton")
 	if back == null:
 		_abort()
 		return
 	back.pressed.emit()
-	await get_tree().process_frame
-	await get_tree().process_frame
-	await get_tree().process_frame
+	await _settle()
 
 	var back_scene := get_tree().current_scene
-	_check(back_scene != null and _find_by_name(back_scene, "UpgradeButton") != null, "返回后回到主界面 (存在 UpgradeButton)")
+	_check(back_scene != null and _find_by_name(back_scene, "TaskButton") != null, "返回后回到主界面 (存在 TaskButton)")
+
+	# 设置弹层 game_menu 段 (存读档/返回标题)
+	var settings_btn: Button = null
+	if back_scene != null:
+		settings_btn = _find_by_name(back_scene, "SettingsButton") as Button
+	_check(settings_btn != null, "主界面存在 SettingsButton")
+	if settings_btn == null:
+		_abort()
+		return
+	settings_btn.pressed.emit()
+	await _settle()
+
+	var overlay := _find_by_name(back_scene, "SettingsOverlay")
+	_check(overlay != null, "点设置弹出 SettingsOverlay")
+	if overlay == null:
+		_abort()
+		return
+	_check(_find_by_name(overlay, "SaveButton") != null, "游戏菜单含 SaveButton (保存进度)")
+	_check(_find_by_name(overlay, "SlotOption") != null, "游戏菜单含 SlotOption (3 存档槽)")
+	var slot_opt := _find_by_name(overlay, "SlotOption") as OptionButton
+	_check(slot_opt != null and slot_opt.item_count == 3, "SlotOption 共 3 个槽位")
+	_check(_find_by_name(overlay, "LoadButton") != null, "游戏菜单含 LoadButton (读取进度)")
+	_check(_find_by_name(overlay, "MenuStatusLabel") != null, "游戏菜单含 MenuStatusLabel")
+	_check(_find_by_name(overlay, "BackToTitleButton") != null, "游戏菜单含 BackToTitleButton (返回标题)")
+	_check(_find_by_name(overlay, "FullscreenToggle") != null and _find_by_name(overlay, "VolumeSlider") != null, "设置原有 全屏/音量 保留")
 
 	if _failed:
 		printerr("INTTEST: FAILED")

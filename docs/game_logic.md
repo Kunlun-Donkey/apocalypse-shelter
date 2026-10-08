@@ -472,6 +472,10 @@ loot_node.<id>
 → 结算入仓(resource)
 ```
 
+- **探索挂机等待** (用户定稿 2026-10, S2 实装): 世界界面"探索"按钮走**游戏等待逻辑** —
+  派出后按游戏时钟计 `search_time` (locations/*.conf), 时间到自动结算资源入仓,
+  无需玩家守着; 等待期间可自由切场景/挂机。S1 该按钮为占位 (B4)。
+
 #### A12.2 配置驱动 (原 L2)
 
 | 文件 | 驱动内容 |
@@ -662,20 +666,26 @@ boot.tscn → login.tscn → main.tscn ⇄ shelter_interior.tscn
 - 读档流程: `SaveManager.load_game(slot)` → 空/损坏提示不切换; 成功则
   `shelter.set_state()` + `TimeManager.set_state()` → 主界面
 
-### B4. main.tscn (游戏主界面)
+### B4. main.tscn (游戏主界面 = 世界界面)
 
-布局 (**三区布局**, 用户选定):
+布局 (**顶部资源条 + 底部功能按钮**, 用户定稿 2026-10; 升级不在本界面, 见 B5):
 
 1. **顶部 HUD 通栏** (TopHud, 横贯全宽): 左侧资源条 ResourceBar — wood / steel / food / water
    四格 (节点 `ResourceItem_<id>` + `ResourceName_<id>` + `ResourceValue_<id>`),
    每格显示 **当前数/库存上限** (`200/200` 格式) — 纯 CONF 展示, 数据口径见 A6.4;
-   右侧游戏时间标签 (TimeManager.get_time_text()) + 设置按钮
-2. **左侧信息面板** (PanelContainer, 从左上 HUD 下方起): 庇护所名称 / `LvN 名称` /
-   满级进度 X/12 / 数值行 (人口上限 | 建筑位 | 防御, 产量加成 | 仓储加成) /
-   升级按钮 / 冷却提示 / 状态文本 / 保存·读档 (OptionButton 选槽 + 保存 + 读档) / 返回标题
-3. **中央**: 底图 `assets/map/first_scene.png` (恒定世界图) + 庇护所图按等级换景
+   右侧 **等级标签 LevelLabel (`LvN 名称`)** + 游戏时间标签 (TimeManager.get_time_text()) + 设置按钮
+2. **中央**: 底图 `assets/map/first_scene.png` (恒定世界图) + 庇护所图按等级换景
    (不放 UI, 等级变化一眼可见; 口径见下方"底图+庇护所图")
-4. **右下**: "进入庇护所" 按钮 (EnterShelterButton) → shelter_interior.tscn
+3. **底部一排 6 功能按钮** (BottomBar, 等分, 节点名 = 测试契约) + 其上提示行 StatusLabel:
+
+| 按钮 | 节点名 | 功能 | 对应系统 (当前 system.conf 全 OFF) |
+|---|---|---|---|
+| 任务 | TaskButton | 游戏任务 | quest |
+| 仓库 | WarehouseButton | 游戏仓库 | resource (+building 容量) |
+| 出城 | OutCityButton | 出城新地图 | map + location |
+| 探索 | ExploreButton | 探索挂机 (见 A12.1) | exploration + loot |
+| 招募 | RecruitButton | 招募 NPC | npc + survivor |
+| 进入 | EnterShelterButton | 进入庇护所 → shelter_interior.tscn | shelter (已开) |
 
 交互规则:
 
@@ -685,28 +695,36 @@ boot.tscn → login.tscn → main.tscn ⇄ shelter_interior.tscn
   在 main.tscn 节点 ShelterLayer 上 (**Godot 编辑器拖拽摆位**, 存 tscn 即定稿),
   缺文件回退 shelter_level1, 仍缺则隐藏 (`_shelter_overlay_texture()`)
   — 用户后续重新生成庇护所图覆盖同名文件即换图
-- **升级**: 点击 → `start_upgrade()` 成功则按钮禁用显示"升级中..." + 剩余秒数
-  (每帧刷新) → 冷却完成信号 → 状态文本"升级完成: LvN 名称", 数值/背景/资源条全部刷新;
-  满级或冷却中按钮禁用
-- **保存/读档**: 只作用于选中槽位; 保存写入 shelter+time 状态, 读档 set_state 后 `_refresh()`
-- **返回标题**: change_scene → login.tscn
+- **5 占位按钮** (任务/仓库/出城/探索/招募): S1 纯占位零逻辑, 点击 →
+  StatusLabel 显示 `后续版本开放: X`; 各系统开启后逐个接管 (禁用系统零初始化, 不建系统对象)
+- **进入**: change_scene → shelter_interior.tscn
+- **升级只在庇护所室内** (B5), 世界界面不提供升级入口
+- **存读档/返回标题**: 移入设置弹层游戏菜单段 (B6); main 只保留
+  `level_changed` 监听刷新楼体图 + LevelLabel (读档/升级后刷新通道)
 
 ### B5. shelter_interior.tscn (庇护所内部)
 
 - 背景 `blank_interior_1920x1080.png`; 全代码 UI 壳 (tscn 只放根节点)
-- **2×3 剖面房间面板** (RoomPanel_1~5, 各 300×220 占位图 `blank_room_panel_512x512.png`):
-  - 上层 3 间: 卧室 / 储藏室 / 厨房
-  - 下层 2 间: 工作台 / 大门
-- **房间解锁数 = 当前等级 `building_slots`** (只读展示):
-  序号 ≤ building_slots → "已解锁 (S2 开放操作)", 否则 "未解锁 (升级解锁)"
-- RoomSummary: `房间解锁 X/5` + 满解锁"已全部解锁", 否则提示升级解锁更多
-- 房间操作 (建造/入住/派工) 待 S2+ 各系统开启后实现, S1 不做
+- **一房一床极简** (用户定稿 2026-10, 其余房间/家具后续版本):
+  - `RoomPanel_1` 卧室: 300×220 占位图 `blank_room_panel_512x512.png` + 房名 + `BedLabel`="床 ×1" + "已启用"
+  - 原 2×3 五房 (卧室/储藏室/厨房/工作台/大门) 与 RoomSummary/`building_slots` 解锁展示**已移除**,
+    待后续房间玩法版本恢复扩展
+- **升级区** (自 main 迁入; 升级唯一入口): `UpgradeButton` (升级庇护所) +
+  `CooldownLabel` (冷却倒计时) + `UpgradeStatusLabel` (状态文本) + LevelLabel
+  - 点击 → `start_upgrade()` 成功则按钮禁用显示"升级中..." + 剩余秒数 (每帧刷新)
+    → 冷却完成信号 → "升级完成: LvN 名称"; 满级或冷却中按钮禁用
+  - S1 升级 = 30s 现实冷却 (ShelterSystem.TEMP_UPGRADE_COOLDOWN_REAL_SECONDS), S2 引入资源后废弃
 - BackButton → 返回主界面
 
 ### B6. 设置面板 (SettingsOverlay, 弹层)
 
 - 全屏开关 + 主音量滑条; **修改即生效即写 `user://settings.json`** (与游戏存档分离)
 - 登录/主界面两个入口; Esc 或关闭按钮退出; 重开游戏保留上次设置
+- **游戏菜单段** (`open(parent, game_menu=true)`, 仅主界面入口带):
+  `SlotOption` 3 存档槽 + `SaveButton` 保存进度 + `LoadButton` 读取进度
+  (快照 `{shelter, time}` → SaveManager, 读档 set_state 后刷新) +
+  `MenuStatusLabel` 结果文本 + `BackToTitleButton` 返回标题 (→ login.tscn);
+  登录入口 `open(parent)` 不带该段
 
 ### B7. UI 资源加载约定 (缺图不崩溃)
 

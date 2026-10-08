@@ -46,7 +46,8 @@ CONF 数据文件可以提前存在 (休眠), 但对应 System/UI/玩法代码�
 
 ### 2.1 目标
 
-Godot 里 F5 能运行: 看到庇护所 Lv1, 点升级 → Lv2 → Lv3, 退出重进进度还在。
+Godot 里 F5 能运行: 登录 → 世界界面 (first_scene.png 底图 + 顶部资源条 + 底部 6 功能按钮)
+→ 点"进入" → 庇护所内部 (一房一床) 点升级 → Lv2 → Lv3, 退出重进进度还在。
 **没有任何资源** — 升级只花现实时间冷却 (临时常量 30 秒/级, S2 引入资源后废弃)。
 
 ### 2.2 开关 (configs/system.conf, 应保持一致)
@@ -57,7 +58,8 @@ OFF: 其余全部 — 禁止实现、禁止初始化、禁止写 UI
 ```
 
 > settings = 设置面板 (全屏开关 + 主音量, src/ui/settings_overlay.gd), 属于 CORE-ui 的延伸;
-> 入口在登录/主界面, 修改即生效即存 `user://settings.json`。
+> 入口在登录/主界面, 修改即生效即存 `user://settings.json`; 主界面入口带"游戏菜单"段
+> (存/读档 3 槽 + 返回标题), 登录入口不带 (逻辑书 B6)。
 
 ### 2.3 范围裁剪 (关键)
 
@@ -78,7 +80,7 @@ OFF: 其余全部 — 禁止实现、禁止初始化、禁止写 UI
    - 每级生效: population_cap / building_slots / storage_bonus / defense / production_bonus_percent (只存数值, 无消费方也无妨)
 4. **SaveSystem**: GameState { shelter_level, 升级冷却计时, 游戏时刻 } 序列化, 3 槽
 5. **TimeManager**: 游戏时钟 (1 游戏时 = 60 现实秒; 1 现实小时 ≈ 2.5 游戏天, 开局 2~3h 现实 = 5~7 游戏天 — 留存节奏见逻辑书 A5), 升级冷却计时用现实秒
-6. **最小 UI**: 庇护所面板 (名称/等级/满级进度/升级按钮+冷却显示), 保存/读档按钮
+6. **最小 UI**: 世界界面 (底图+楼体叠层 / 顶部资源条+等级 / 底部 6 按钮: 任务/仓库/出城/探索/招募/进入, 前 5 个占位) + 庇护所内部 (一房一床 + 升级按钮+冷却显示) + 设置弹层游戏菜单 (存/读档)
 7. **验收**: §2.5 全部勾掉
 
 ### 2.5 Dev-S1 出口标准 (全部满足才进 S2)
@@ -91,7 +93,7 @@ OFF: 其余全部 — 禁止实现、禁止初始化、禁止写 UI
 - [x] `system.conf` 中任一 OFF 系统未被初始化 (零初始化验证)  ← autotest
 
 自动回归入口: `tests/dev_s1_autotest.tscn` (23 项) + `dev_s1_navtest.tscn` (8 项跳转+资源条) +
-`dev_s1_settest.tscn` (11 项设置面板) + `dev_s1_inttest.tscn` (14 项室内导航), headless 运行,
+`dev_s1_settest.tscn` (11 项设置面板) + `dev_s1_inttest.tscn` (35 项世界/室内导航+占位提示+游戏菜单), headless 运行,
 命令见 `.claude/skills/test/SKILL.md`。
 
 ## 3. Dev-S2 野外物资 + 资源 + 基础建筑
@@ -331,7 +333,7 @@ button_skin.gd 处理, 不放 blank。新增图片资源后必须先 `godot --he
 具体加载兜底/换景规则见逻辑书 B7。
 
 **庇护所内部场景 (S1 表现层扩展)**: `src/scenes/shelter_interior.tscn` (全代码 UI 壳),
-2×3 剖面式房间面板 + 按 `building_slots` 只读解锁。布局与交互见逻辑书 B5。
+一房一床极简 (RoomPanel_1 卧室 + "床 ×1") + 升级区 (升级唯一入口)。布局与交互见逻辑书 B5。
 
 ### 13.6 音频素材格式/尺寸总规范
 

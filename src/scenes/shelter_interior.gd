@@ -1,27 +1,32 @@
 extends Control
 # ============================================================
-# ShelterInterior — 庇护所内部场景 (Dev-S1 纯 UI 壳, blank 占位图, 后续填实际 UI 资源)
-# 房间剖面网格: 上层 卧室/储藏室/厨房, 下层 工作台/大门, 解锁状态只读展示 (按建筑位)
-# 建造/资源/入住等玩法系统 OFF, 房间操作 S2 开放
+# ShelterInterior — 庇护所内部场景 (Dev-S1 极简 UI 壳, blank 占位图, 后续填实际 UI 资源)
+# 一房一床极简 + 升级区: 只有 卧室(RoomPanel_1, 床 ×1) + 庇护所升级 (从 main 迁入)
+# 其余房间/家具/建造/资源/入住等玩法系统后续版本开放
 # ============================================================
 
 const MAIN_SCENE := "res://src/scenes/main.tscn"
 
-const ROOM_COUNT := 5
-const TOP_ROW_COUNT := 3
-const ROOM_LABELS := ["卧室", "储藏室", "厨房", "工作台", "大门"]
-
 var _shelter: ShelterSystem
 
 var _level_label: Label
-var _summary_label: Label
-var _room_status_labels: Array[Label] = []
+var _upgrade_button: Button
+var _cooldown_label: Label
+var _upgrade_status_label: Label
 
 
 func _ready() -> void:
 	_shelter = get_node("/root/ShelterSystem") as ShelterSystem
 	_build_ui()
+	_shelter.upgrade_started.connect(_on_upgrade_started)
+	_shelter.upgrade_completed.connect(_on_upgrade_completed)
+	_shelter.level_changed.connect(_on_level_changed)
 	_refresh()
+
+
+func _process(_delta: float) -> void:
+	if _shelter.upgrading:
+		_cooldown_label.text = "升级中, 剩余 %.1f 秒" % _shelter.cooldown_remaining
 
 
 # ---------------- UI ----------------
@@ -75,25 +80,36 @@ func _build_ui() -> void:
 	grid.add_theme_constant_override("separation", 20)
 	mid_box.add_child(grid)
 
-	var top_row := HBoxContainer.new()
-	top_row.add_theme_constant_override("separation", 24)
-	top_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	grid.add_child(top_row)
-	for i: int in range(TOP_ROW_COUNT):
-		top_row.add_child(_build_room_panel(i))
+	grid.add_child(_build_room_panel())
 
-	var bottom_row := HBoxContainer.new()
-	bottom_row.add_theme_constant_override("separation", 24)
-	bottom_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	grid.add_child(bottom_row)
-	for i: int in range(TOP_ROW_COUNT, ROOM_COUNT):
-		bottom_row.add_child(_build_room_panel(i))
+	# ---- 升级区 (自 main 迁入) ----
+	var upgrade_box := VBoxContainer.new()
+	upgrade_box.name = "UpgradeBox"
+	upgrade_box.add_theme_constant_override("separation", 10)
+	upgrade_box.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	mid_box.add_child(upgrade_box)
 
-	_summary_label = Label.new()
-	_summary_label.name = "RoomSummary"
-	_summary_label.add_theme_font_size_override("font_size", 22)
-	_summary_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	mid_box.add_child(_summary_label)
+	_upgrade_button = Button.new()
+	_upgrade_button.name = "UpgradeButton"
+	_upgrade_button.text = "升级庇护所"
+	_upgrade_button.custom_minimum_size = Vector2(360, 56)
+	_upgrade_button.add_theme_font_size_override("font_size", 26)
+	_upgrade_button.pressed.connect(_on_upgrade_pressed)
+	ButtonSkin.apply(_upgrade_button)
+	upgrade_box.add_child(_upgrade_button)
+
+	_cooldown_label = Label.new()
+	_cooldown_label.name = "CooldownLabel"
+	_cooldown_label.add_theme_font_size_override("font_size", 18)
+	_cooldown_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_cooldown_label.modulate = Color(1, 0.9, 0.6, 0.9)
+	upgrade_box.add_child(_cooldown_label)
+
+	_upgrade_status_label = Label.new()
+	_upgrade_status_label.name = "UpgradeStatusLabel"
+	_upgrade_status_label.add_theme_font_size_override("font_size", 18)
+	_upgrade_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	upgrade_box.add_child(_upgrade_status_label)
 
 	var back_button := Button.new()
 	back_button.name = "BackButton"
@@ -106,10 +122,11 @@ func _build_ui() -> void:
 	root_box.add_child(back_button)
 
 
-# 房间面板: 占位纹理 + 房间名 + 解锁状态 (只读, 房间操作 S2 开放)
-func _build_room_panel(room_index: int) -> PanelContainer:
+# 房间面板: 一房一床极简 (占位纹理 + 房名 "卧室" + BedLabel "床 ×1" + "已启用")
+# 其余房间/家具后续版本开放
+func _build_room_panel() -> PanelContainer:
 	var panel := PanelContainer.new()
-	panel.name = "RoomPanel_%d" % (room_index + 1)
+	panel.name = "RoomPanel_1"
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.05, 0.07, 0.1, 0.85)
 	style.corner_radius_top_left = 12
@@ -134,42 +151,70 @@ func _build_room_panel(room_index: int) -> PanelContainer:
 	box.add_child(room_texture)
 
 	var room_name_label := Label.new()
-	room_name_label.text = str(ROOM_LABELS[room_index])
+	room_name_label.text = "卧室"
 	room_name_label.add_theme_font_size_override("font_size", 26)
 	room_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(room_name_label)
 
+	var bed_label := Label.new()
+	bed_label.name = "BedLabel"
+	bed_label.text = "床 ×1"
+	bed_label.add_theme_font_size_override("font_size", 22)
+	bed_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(bed_label)
+
 	var status_label := Label.new()
-	status_label.name = "RoomStatus_%d" % (room_index + 1)
+	status_label.text = "已启用"
 	status_label.add_theme_font_size_override("font_size", 18)
 	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(status_label)
-	_room_status_labels.append(status_label)
 	return panel
 
 
 # ---------------- 刷新 ----------------
 
-# 只读展示: 等级 + 房间解锁状态 (房间序号 <= building_slots 视为已解锁)
 func _refresh() -> void:
 	_level_label.text = "Lv%d %s" % [_shelter.current_level, _shelter.get_level_name()]
-	var stats: Dictionary = _shelter.get_level_stats()
-	var slots: int = int(stats.get("building_slots", 0))
-	var unlocked: int = 0
-	for i: int in range(_room_status_labels.size()):
-		var status_label: Label = _room_status_labels[i]
-		if i + 1 <= slots:
-			status_label.text = "已解锁 (S2 开放操作)"
-			unlocked += 1
-		else:
-			status_label.text = "未解锁 (升级解锁)"
-	if unlocked >= ROOM_COUNT:
-		_summary_label.text = "房间解锁 %d/%d | 已全部解锁" % [unlocked, ROOM_COUNT]
+	if _shelter.upgrading:
+		_upgrade_button.disabled = true
+		_upgrade_button.text = "升级中..."
+	elif _shelter.is_max_level():
+		_upgrade_button.disabled = true
+		_upgrade_button.text = "已满级 (等待后续版本开放更高等级)"
+		_cooldown_label.text = ""
 	else:
-		_summary_label.text = "房间解锁 %d/%d | 升级庇护所解锁更多房间" % [unlocked, ROOM_COUNT]
+		_upgrade_button.disabled = not _shelter.can_upgrade()
+		_upgrade_button.text = "升级 → Lv%d %s" % [
+			_shelter.current_level + 1,
+			_shelter.get_level_name(_shelter.current_level + 1),
+		]
+		if not _shelter.upgrading:
+			_cooldown_label.text = "升级耗时 %.0f 秒 (S1 临时冷却)" % ShelterSystem.TEMP_UPGRADE_COOLDOWN_REAL_SECONDS
 
 
 # ---------------- 交互 ----------------
 
+func _on_upgrade_pressed() -> void:
+	if _shelter.start_upgrade():
+		_upgrade_status_label.text = "开始升级..."
+		_refresh()
+	else:
+		_upgrade_status_label.text = "当前无法升级"
+	_refresh()
+
+
 func _on_back_pressed() -> void:
 	get_tree().change_scene_to_file(MAIN_SCENE)
+
+
+func _on_upgrade_started(_cooldown: float) -> void:
+	_refresh()
+
+
+func _on_upgrade_completed(new_level: int) -> void:
+	_upgrade_status_label.text = "升级完成: Lv%d %s" % [new_level, _shelter.get_level_name(new_level)]
+	_refresh()
+
+
+func _on_level_changed(_new_level: int) -> void:
+	_refresh()

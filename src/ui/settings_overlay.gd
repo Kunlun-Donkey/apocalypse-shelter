@@ -4,6 +4,7 @@ extends Control
 # 设置面板 (覆盖层): 全屏开关 + 主音量, 修改即生效并自动保存
 # 存档: user://settings.json (与游戏存档分离)
 # 用法: SettingsOverlay.open(任意父节点); Esc 或关闭按钮退出
+#   open(parent, game_menu=true) 追加"游戏菜单"段 (存/读档 + 返回标题)
 # ============================================================
 
 const SETTINGS_PATH := "user://settings.json"
@@ -13,10 +14,15 @@ var _fullscreen: CheckButton
 var _volume_slider: HSlider
 var _volume_label: Label
 
+var _game_menu := false
+var _slot_option: OptionButton
+var _menu_status: Label
 
-static func open(parent: Node) -> SettingsOverlay:
+
+static func open(parent: Node, game_menu: bool = false) -> SettingsOverlay:
 	var overlay := SettingsOverlay.new()
 	overlay.name = "SettingsOverlay"
+	overlay._game_menu = game_menu  # 必须在 add_child 之前赋值 (_ready/_build_ui 会读它)
 	parent.add_child(overlay)
 	return overlay
 
@@ -122,6 +128,9 @@ func _build_ui() -> void:
 	_volume_label.add_theme_font_size_override("font_size", 22)
 	vol_row.add_child(_volume_label)
 
+	if _game_menu:
+		_build_game_menu(box)
+
 	var close_button := Button.new()
 	close_button.name = "CloseButton"
 	close_button.text = "关闭"
@@ -130,6 +139,97 @@ func _build_ui() -> void:
 	close_button.pressed.connect(_close)
 	ButtonSkin.apply(close_button)
 	box.add_child(close_button)
+
+
+# ---------------- 游戏菜单 (game_menu=true 时显示) ----------------
+
+func _build_game_menu(box: VBoxContainer) -> void:
+	var menu_box := VBoxContainer.new()
+	menu_box.name = "GameMenu"
+	menu_box.add_theme_constant_override("separation", 12)
+	box.add_child(menu_box)
+
+	var menu_title := Label.new()
+	menu_title.text = "游戏菜单"
+	menu_title.add_theme_font_size_override("font_size", 22)
+	menu_box.add_child(menu_title)
+
+	_slot_option = OptionButton.new()
+	_slot_option.name = "SlotOption"
+	_slot_option.custom_minimum_size = Vector2(360, 44)
+	_slot_option.add_theme_font_size_override("font_size", 22)
+	for i in SaveManager.get_slot_count():
+		_slot_option.add_item("存档 %d" % (i + 1), i + 1)
+	_slot_option.select(0)
+	menu_box.add_child(_slot_option)
+
+	var btn_row := HBoxContainer.new()
+	btn_row.add_theme_constant_override("separation", 24)
+	menu_box.add_child(btn_row)
+	var save_button := Button.new()
+	save_button.name = "SaveButton"
+	save_button.text = "保存进度"
+	save_button.custom_minimum_size = Vector2(200, 52)
+	save_button.add_theme_font_size_override("font_size", 24)
+	save_button.pressed.connect(_on_save_pressed)
+	ButtonSkin.apply(save_button)
+	btn_row.add_child(save_button)
+	var load_button := Button.new()
+	load_button.name = "LoadButton"
+	load_button.text = "读取进度"
+	load_button.custom_minimum_size = Vector2(200, 52)
+	load_button.add_theme_font_size_override("font_size", 24)
+	load_button.pressed.connect(_on_load_pressed)
+	ButtonSkin.apply(load_button)
+	btn_row.add_child(load_button)
+
+	_menu_status = Label.new()
+	_menu_status.name = "MenuStatusLabel"
+	_menu_status.text = ""
+	_menu_status.add_theme_font_size_override("font_size", 20)
+	menu_box.add_child(_menu_status)
+
+	var back_button := Button.new()
+	back_button.name = "BackToTitleButton"
+	back_button.text = "返回标题"
+	back_button.custom_minimum_size = Vector2(360, 52)
+	back_button.add_theme_font_size_override("font_size", 24)
+	back_button.pressed.connect(_on_back_to_title_pressed)
+	ButtonSkin.apply(back_button)
+	menu_box.add_child(back_button)
+
+
+func _selected_menu_slot() -> int:
+	if _slot_option == null or _slot_option.item_count == 0:
+		return 1
+	return _slot_option.get_selected_id()
+
+
+func _on_save_pressed() -> void:
+	var slot := _selected_menu_slot()
+	var shelter := get_node("/root/ShelterSystem") as ShelterSystem
+	var data := {
+		"shelter": shelter.get_state(),
+		"time": TimeManager.get_state(),
+	}
+	var err := SaveManager.save_game(slot, data)
+	_menu_status.text = "保存成功 (存档 %d)" % slot if err == OK else "保存失败 (错误 %d)" % err
+
+
+func _on_load_pressed() -> void:
+	var slot := _selected_menu_slot()
+	var data := SaveManager.load_game(slot)
+	if data.is_empty():
+		_menu_status.text = "读档失败: 存档损坏或为空"
+		return
+	var shelter := get_node("/root/ShelterSystem") as ShelterSystem
+	shelter.set_state(data.get("shelter", {}))
+	TimeManager.set_state(data.get("time", {}))
+	_menu_status.text = "已读取存档 %d" % slot
+
+
+func _on_back_to_title_pressed() -> void:
+	get_tree().change_scene_to_file("res://src/scenes/login.tscn")
 
 
 # ---------------- 设置读写与应用 ----------------
