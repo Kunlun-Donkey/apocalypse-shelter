@@ -26,7 +26,7 @@ $GODOT --headless --import
 # 23 项: 配置/等级链/升级冷却/存读档/零初始化 (含 2×30s 冷却, 整体 ~70s)
 $GODOT --headless --path . res://tests/dev_s1_autotest.tscn
 
-# 5 项: 登录→Main 跳转, 新游戏重置 Lv1 第1天 08:00
+# 8 项: 登录→Main 跳转 + 顶部资源条, 新游戏重置 Lv1 第1天 08:00
 $GODOT --headless --path . res://tests/dev_s1_navtest.tscn
 
 # 11 项: 设置面板 (弹出/全屏/音量持久化/Esc 关闭)

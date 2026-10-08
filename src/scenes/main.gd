@@ -1,8 +1,8 @@
 extends Control
 # ============================================================
 # Main — Dev-S1 最小游戏界面 (场景背景 assets/blank_lvN_1920x1080.png, 按等级切换, 后续填实际 UI 资源)
-# 庇护所面板: 名称/等级/满级进度/数值 + 升级按钮(冷却) + 保存/读档
-# 背景可进入庇护所内部场景 (右下角"进入庇护所"按钮)
+# 三区布局 (用户选定): 顶部 HUD 通栏 (资源条+时间/设置) / 左侧信息面板 (等级/数值/升级/存读档)
+# 中央留给庇护所全景换景 / 右下"进入庇护所"按钮 (逻辑书 B4)
 # ============================================================
 
 const LOGIN_SCENE := "res://src/scenes/login.tscn"
@@ -22,6 +22,7 @@ var _slot_option: OptionButton
 var _save_button: Button
 var _load_button: Button
 var _status_label: Label
+var _resource_value_labels: Dictionary = {}  # key -> Label
 
 
 func _ready() -> void:
@@ -49,25 +50,44 @@ func _build_ui() -> void:
 	_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(_bg)
 
+	# ---- 顶部 HUD 通栏: 左资源条 + 右时间/设置 (三区布局) ----
+	var hud := PanelContainer.new()
+	hud.name = "TopHud"
+	var hud_style := StyleBoxFlat.new()
+	hud_style.bg_color = Color(0.05, 0.07, 0.1, 0.72)
+	hud_style.content_margin_left = 32
+	hud_style.content_margin_right = 32
+	hud_style.content_margin_top = 14
+	hud_style.content_margin_bottom = 14
+	hud.add_theme_stylebox_override("panel", hud_style)
+	hud.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	hud.custom_minimum_size = Vector2(0, 88)
+	add_child(hud)
+
+	var hud_row := HBoxContainer.new()
+	hud_row.add_theme_constant_override("separation", 24)
+	hud.add_child(hud_row)
+
+	_build_resource_bar(hud_row)
+
+	var hud_spacer := Control.new()
+	hud_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hud_row.add_child(hud_spacer)
+
 	_time_label = Label.new()
-	_time_label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	_time_label.position = Vector2(-320, 24)
-	_time_label.size = Vector2(296, 40)
 	_time_label.add_theme_font_size_override("font_size", 28)
-	_time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	add_child(_time_label)
+	_time_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	hud_row.add_child(_time_label)
 
 	if ConfigManager.is_enabled("settings"):
 		var settings_button := Button.new()
 		settings_button.name = "SettingsButton"
 		settings_button.text = "设置"
-		settings_button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-		settings_button.position = Vector2(-160, 80)
-		settings_button.size = Vector2(136, 48)
+		settings_button.custom_minimum_size = Vector2(120, 48)
 		settings_button.add_theme_font_size_override("font_size", 22)
 		settings_button.pressed.connect(_on_settings_pressed)
 		ButtonSkin.apply(settings_button)
-		add_child(settings_button)
+		hud_row.add_child(settings_button)
 
 	var enter_shelter_button := Button.new()
 	enter_shelter_button.name = "EnterShelterButton"
@@ -93,9 +113,9 @@ func _build_ui() -> void:
 	style.content_margin_top = 24
 	style.content_margin_bottom = 24
 	panel.add_theme_stylebox_override("panel", style)
-	panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	panel.position = Vector2(48, -420)
-	panel.size = Vector2(560, 372)
+	panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	panel.position = Vector2(48, 128)
+	panel.custom_minimum_size = Vector2(520, 0)
 	add_child(panel)
 
 	var box := VBoxContainer.new()
@@ -123,7 +143,7 @@ func _build_ui() -> void:
 	_upgrade_button = Button.new()
 	_upgrade_button.name = "UpgradeButton"
 	_upgrade_button.text = "升级"
-	_upgrade_button.custom_minimum_size = Vector2(496, 56)
+	_upgrade_button.custom_minimum_size = Vector2(456, 56)
 	_upgrade_button.add_theme_font_size_override("font_size", 26)
 	_upgrade_button.pressed.connect(_on_upgrade_pressed)
 	ButtonSkin.apply(_upgrade_button)
@@ -134,19 +154,23 @@ func _build_ui() -> void:
 	_cooldown_label.modulate = Color(1, 0.9, 0.6, 0.9)
 	box.add_child(_cooldown_label)
 
+	_status_label = Label.new()
+	_status_label.add_theme_font_size_override("font_size", 18)
+	box.add_child(_status_label)
+
 	var save_row := HBoxContainer.new()
 	save_row.add_theme_constant_override("separation", 12)
 	box.add_child(save_row)
 
 	_slot_option = OptionButton.new()
-	_slot_option.custom_minimum_size = Vector2(160, 48)
+	_slot_option.custom_minimum_size = Vector2(150, 48)
 	_slot_option.add_theme_font_size_override("font_size", 20)
 	save_row.add_child(_slot_option)
 
 	_save_button = Button.new()
 	_save_button.name = "SaveButton"
 	_save_button.text = "保存"
-	_save_button.custom_minimum_size = Vector2(140, 48)
+	_save_button.custom_minimum_size = Vector2(130, 48)
 	_save_button.add_theme_font_size_override("font_size", 22)
 	_save_button.pressed.connect(_on_save_pressed)
 	ButtonSkin.apply(_save_button)
@@ -155,20 +179,16 @@ func _build_ui() -> void:
 	_load_button = Button.new()
 	_load_button.name = "LoadButton"
 	_load_button.text = "读档"
-	_load_button.custom_minimum_size = Vector2(140, 48)
+	_load_button.custom_minimum_size = Vector2(130, 48)
 	_load_button.add_theme_font_size_override("font_size", 22)
 	_load_button.pressed.connect(_on_load_pressed)
 	ButtonSkin.apply(_load_button)
 	save_row.add_child(_load_button)
 
-	_status_label = Label.new()
-	_status_label.add_theme_font_size_override("font_size", 18)
-	box.add_child(_status_label)
-
 	var back_button := Button.new()
 	back_button.name = "BackButton"
 	back_button.text = "返回标题"
-	back_button.custom_minimum_size = Vector2(496, 44)
+	back_button.custom_minimum_size = Vector2(456, 44)
 	back_button.pressed.connect(_on_back_pressed)
 	ButtonSkin.apply(back_button)
 	box.add_child(back_button)
@@ -177,6 +197,61 @@ func _build_ui() -> void:
 	for slot in range(1, SaveManager.get_slot_count() + 1):
 		_slot_option.add_item("存档 %d" % slot, slot)
 	_slot_option.select(0)
+
+
+# 顶部资源条 (挂在 HUD 通栏内): 每资源一格 "名称 当前数/库存上限" (纯 UI 展示, S2 ResourceSystem 接管)
+func _build_resource_bar(parent: Node) -> void:
+	var bar := HBoxContainer.new()
+	bar.name = "ResourceBar"
+	bar.add_theme_constant_override("separation", 16)
+	parent.add_child(bar)
+
+	for item: Dictionary in ConfigManager.get_resource_display_items():
+		var key := str(item.get("key", ""))
+		var panel := PanelContainer.new()
+		panel.name = "ResourceItem_%s" % key
+		var style := StyleBoxFlat.new()
+		style.bg_color = Color(0.05, 0.07, 0.1, 0.85)
+		style.corner_radius_top_left = 10
+		style.corner_radius_top_right = 10
+		style.corner_radius_bottom_left = 10
+		style.corner_radius_bottom_right = 10
+		style.content_margin_left = 20
+		style.content_margin_right = 20
+		style.content_margin_top = 10
+		style.content_margin_bottom = 10
+		panel.add_theme_stylebox_override("panel", style)
+		bar.add_child(panel)
+
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 10)
+		panel.add_child(row)
+
+		var name_label := Label.new()
+		name_label.name = "ResourceName_%s" % key
+		name_label.text = str(item.get("name", key))
+		name_label.add_theme_font_size_override("font_size", 22)
+		row.add_child(name_label)
+
+		var value_label := Label.new()
+		value_label.name = "ResourceValue_%s" % key
+		value_label.add_theme_font_size_override("font_size", 22)
+		row.add_child(value_label)
+		_resource_value_labels[key] = value_label
+
+
+func _refresh_resource_bar() -> void:
+	var init: Dictionary = ConfigManager.get_initial_state()
+	var stats: Dictionary = _shelter.get_level_stats()
+	var capacity_bonus: int = int(stats.get("storage_bonus", 0))
+	for item: Dictionary in ConfigManager.get_resource_display_items():
+		var key := str(item.get("key", ""))
+		var label := _resource_value_labels.get(key) as Label
+		if label == null:
+			continue
+		var amount: int = int(init.get("initial_resource_%s" % key, 0))
+		var capacity: int = int(item.get("base_capacity", 0)) + capacity_bonus
+		label.text = "%d/%d" % [amount, capacity]
 
 
 # ---------------- 刷新 ----------------
@@ -191,6 +266,7 @@ func _level_bg_texture() -> Texture2D:
 
 func _refresh() -> void:
 	_bg.texture = _level_bg_texture()
+	_refresh_resource_bar()
 	var base: Dictionary = ConfigManager.get_shelter_base()
 	_title_label.text = str(base.get("name", ""))
 	_level_label.text = "Lv%d %s" % [_shelter.current_level, _shelter.get_level_name()]
