@@ -3,10 +3,12 @@ extends Node
 # 世界/室内场景导航验证 (headless):
 #   godot --headless --path . res://tests/dev_s1_inttest.tscn
 # 覆盖: 登录"开始新游戏" → Main (顶部资源条/等级 + 底部 6 功能按钮)
-#       → 任务卷轴面板 (列表 任务1~10/详情/接受/放弃) + 4 占位按钮提示 "后续版本开放: X"
+#       → 3 占位按钮提示 "后续版本开放: X"
+#       → 招募面板 (Btn_Recruit 木板卡片三选一: 唐文轩/张睿/吴齐越 + recruit.picked 持久化)
+#       → 任务卷轴面板 (列表 任务1~10/详情/接受/放弃)
 #       → "进入" → ShelterInterior (一房一床 RoomPanel_1/BedLabel + 升级区)
 #       → 室内升级 30s 冷却 → BackButton 返回 Main
-#       → 设置弹层 game_menu 段 (存读档 3 槽/返回标题, 含 quest.accepted round-trip)
+#       → 设置弹层 game_menu 段 (存读档 3 槽/返回标题, 含 quest.accepted/recruit.picked round-trip)
 # ============================================================
 
 var _failed := false
@@ -92,18 +94,17 @@ func _run() -> void:
 	_check(_find_by_name(main_scene, "WarehouseButton") != null, "主界面存在 WarehouseButton (仓库)")
 	_check(_find_by_name(main_scene, "OutCityButton") != null, "主界面存在 OutCityButton (出城)")
 	_check(_find_by_name(main_scene, "ExploreButton") != null, "主界面存在 ExploreButton (探索)")
-	_check(_find_by_name(main_scene, "RecruitButton") != null, "主界面存在 RecruitButton (招募)")
+	_check(_find_by_name(main_scene, "Btn_Recruit") != null, "主界面存在 Btn_Recruit (招募)")
 	var enter := _find_by_name(main_scene, "EnterShelterButton") as Button
 	_check(enter != null and enter.text == "进入", "主界面存在 EnterShelterButton (text=进入)")
 	var level_label := _find_by_name(main_scene, "LevelLabel") as Label
 	_check(level_label != null and level_label.text.begins_with("Lv1"), "顶部 LevelLabel 显示 Lv1")
 
-	# 4 占位按钮点击 → StatusLabel "后续版本开放: X" (任务/进入不是占位)
+	# 3 占位按钮点击 → StatusLabel "后续版本开放: X" (任务/招募/进入不是占位)
 	var placeholders: Array = [
 		["WarehouseButton", "仓库"],
 		["OutCityButton", "出城"],
 		["ExploreButton", "探索"],
-		["RecruitButton", "招募"],
 	]
 	for item: Array in placeholders:
 		var btn := _find_by_name(main_scene, str(item[0])) as Button
@@ -114,6 +115,86 @@ func _run() -> void:
 			var status := _find_by_name(main_scene, "StatusLabel") as Label
 			ok = status != null and status.text == "后续版本开放: %s" % str(item[1])
 		_check(ok, "点 %s 占位提示 '后续版本开放: %s'" % [str(item[1]), str(item[1])])
+
+	# ---- 招募面板 (Btn_Recruit 木板卡片三选一) ----
+	var recruit_btn := _find_by_name(main_scene, "Btn_Recruit") as Button
+	if recruit_btn == null:
+		_abort()
+		return
+	var recruit_panel := _find_by_name(main_scene, "RecruitPanel") as Control
+	_check(recruit_panel != null, "RecruitPanel 常驻场景 (Btn_Recruit 挂载)")
+	if recruit_panel == null:
+		_abort()
+		return
+	_check(not recruit_panel.visible, "招募面板默认隐藏")
+	recruit_btn.pressed.emit()
+	await _settle()
+	_check(recruit_panel.visible, "点 Btn_Recruit 显示招募面板")
+	recruit_btn.pressed.emit()
+	await _settle()
+	_check(not recruit_panel.visible, "再点 Btn_Recruit 关闭招募面板")
+	recruit_btn.pressed.emit()
+	await _settle()
+	_check(recruit_panel.visible, "三击 Btn_Recruit 面板再次显示")
+
+	_check(_find_by_name(recruit_panel, "RecruitBox") != null, "面板含 RecruitBox (1400×700 弹窗)")
+	_check(_find_by_name(recruit_panel, "Mask") != null, "面板含全屏遮罩 Mask")
+	var cards_ok := true
+	var expect_names := ["唐文轩", "张睿", "吴齐越"]
+	var expect_titles := ["老兵", "医师", "工程师"]
+	for i in range(3):
+		var card := _find_by_name(recruit_panel, "NpcCard_%d" % (i + 1))
+		var name_label := _find_by_name(recruit_panel, "NpcName_%d" % (i + 1)) as Label
+		var title_label := _find_by_name(recruit_panel, "NpcTitle_%d" % (i + 1)) as Label
+		if card == null or name_label == null or name_label.text != expect_names[i] \
+				or title_label == null or title_label.text != expect_titles[i]:
+			cards_ok = false
+	_check(cards_ok, "3 张 NpcCard 姓名/职业 = 唐文轩老兵/张睿医师/吴齐越工程师")
+
+	# 属性条: TextureProgressBar max=10, 值按 NPC_DATA 字典
+	var bar := _find_by_name(recruit_panel, "AttrBar_1_1") as TextureProgressBar
+	_check(bar != null and bar.max_value == 10.0 and bar.value == 8.0, "唐文轩 AttrBar_1_1 体力 8/10")
+	bar = _find_by_name(recruit_panel, "AttrBar_2_3") as TextureProgressBar
+	_check(bar != null and bar.max_value == 10.0 and bar.value == 9.0, "张睿 AttrBar_2_3 智慧 9/10")
+	bar = _find_by_name(recruit_panel, "AttrBar_3_3") as TextureProgressBar
+	_check(bar != null and bar.value == 10.0, "吴齐越 AttrBar_3_3 智慧 10/10")
+	var fam := _find_by_name(recruit_panel, "Familiarity_1") as Label
+	_check(fam != null and fam.text == "熟悉度: 35", "Familiarity_1 = 熟悉度: 35")
+	var passive := _find_by_name(recruit_panel, "PassiveTitle_1") as Label
+	_check(passive != null and passive.text == "【觅食专长】", "PassiveTitle_1 = 【觅食专长】")
+	var active := _find_by_name(recruit_panel, "ActiveTitle_3") as Label
+	_check(active != null and active.text == "【机械守卫】", "ActiveTitle_3 = 【机械守卫】")
+	var desc2 := _find_by_name(recruit_panel, "Desc_2") as Label
+	_check(desc2 != null and desc2.text.contains("外科医师"), "Desc_2 含张睿背景文案")
+	_check(_find_by_name(recruit_panel, "Diamond_1") != null and _find_by_name(recruit_panel, "Diamond_3") != null, "每卡顶部有钻石 Diamond_N")
+
+	# 整卡点选 (3 选 1): 点 NpcCard_2 → 张睿
+	var click := InputEventMouseButton.new()
+	click.pressed = true
+	click.button_index = MOUSE_BUTTON_LEFT
+	var card2 := _find_by_name(recruit_panel, "NpcCard_2") as Control
+	if card2 == null:
+		_abort()
+		return
+	card2.gui_input.emit(click)
+	await get_tree().process_frame
+	_check(BtnRecruit.is_picked("张睿"), "点整卡后 BtnRecruit.picked = 张睿")
+	var card2_style := card2.get_theme_stylebox("panel") as StyleBoxFlat
+	_check(card2_style != null and card2_style.border_color.a > 0.5, "已选卡显示深棕描边")
+	var card1 := _find_by_name(recruit_panel, "NpcCard_1") as Control
+	var card1_style: StyleBoxFlat = null
+	if card1 != null:
+		card1_style = card1.get_theme_stylebox("panel") as StyleBoxFlat
+	_check(card1_style != null and card1_style.border_color.a < 0.5, "未选卡无描边")
+
+	# 点遮罩关闭
+	var mask := _find_by_name(recruit_panel, "Mask") as Control
+	if mask == null:
+		_abort()
+		return
+	mask.gui_input.emit(click)
+	await get_tree().process_frame
+	_check(not recruit_panel.visible, "点 Mask 遮罩关闭面板")
 
 	# ---- 任务面板 (发黄卷轴: 左列表 任务1~10 + 右详情 + 接受/放弃) ----
 	task_btn.pressed.emit()
@@ -246,8 +327,9 @@ func _run() -> void:
 	save_btn.pressed.emit()
 	await get_tree().process_frame
 	var menu_status := _find_by_name(overlay, "MenuStatusLabel") as Label
-	_check(menu_status != null and menu_status.text.begins_with("保存成功"), "保存进度成功 (快照含 quest)")
+	_check(menu_status != null and menu_status.text.begins_with("保存成功"), "保存进度成功 (快照含 quest/recruit)")
 	TaskPanel.abandon("quest.placeholder_01")
+	BtnRecruit.reset()
 	var load_btn := _find_by_name(overlay, "LoadButton") as Button
 	_check(load_btn != null, "游戏菜单 LoadButton 可点")
 	if load_btn == null:
@@ -258,6 +340,7 @@ func _run() -> void:
 	menu_status = _find_by_name(overlay, "MenuStatusLabel") as Label
 	_check(menu_status != null and menu_status.text.begins_with("已读取"), "读取进度成功")
 	_check(TaskPanel.is_accepted("quest.placeholder_01"), "读档恢复 已接受 任务状态")
+	_check(BtnRecruit.is_picked("张睿"), "读档恢复 已招募 同伴状态 (张睿)")
 
 	if _failed:
 		printerr("INTTEST: FAILED")

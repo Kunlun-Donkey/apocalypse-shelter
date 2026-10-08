@@ -366,7 +366,7 @@ survivor.<profession>_<nn>
 |---|---|---|---|---|---|
 | npc.merchant_01 | 流动商人 | 城郊/安全区 | 交易 | 否 | 是 |
 | npc.doctor_01 | 游医 | 城郊/农村 | 医疗 | 是 | 是 |
-| npc.engineer_01 | 机械师 | 工业区 | 建筑折扣/修理 | 是 | 是 |
+| npc.mechanic_01 | 机械师 | 工业区 | 建筑折扣/修理 | 是 | 是 |
 | npc.scout_01 | 侦察员 | 森林/山区 | 地图情报 | 是 | 否 |
 | npc.soldier_01 | 逃兵 | 军事区边缘 | 战斗协助 | 是 | 否 |
 | npc.scientist_01 | 研究员 | 城市废墟 | 科技解锁 | 是 | 否 |
@@ -381,20 +381,23 @@ npcs/merchant_01.conf
 ```
 
 新增 NPC = 新增 `npcs/xxx.conf` + registry 登记。
+(注意 id 错开: `npc.engineer_01` 已被开局同伴吴齐越占用, 到访机械师用 `npc.mechanic_01`)
 
-#### A9.3 同伴类型体系 (开局四选一, [passive] 扩展) (原 SPEC I3)
+#### A9.3 同伴类型体系 (开局三选一, [passive] 扩展) (原 SPEC I3)
 
-开局第一位同伴从 4 种类型中**四选一** (`shelter.conf starter_npcs`), 类型决定被动效果;
-其余三种可在游戏过程中招募 (重复可玩性)。`[passive]` 为 npc schema 扩展块:
+用户定稿 2026-10: 开局第一位同伴从 3 名候选中**三选一** (`shelter.conf starter_npcs`,
+玩家在招募面板**点整卡选定**, 见 B4.2), 类型决定被动/主动技能; 其余可在游戏过程中招募
+(重复可玩性)。`[passive]`/`[active]` 为 npc schema 扩展块:
 
-| npc_type | 类型 | 被动效果字段 | 效果 |
-|---|---|---|---|
-| `combat` | 战斗类 (守护) | defense_bonus, defense_reward_bonus[] | 守护庇护所 +防御; 保卫战胜利额外掉落特殊资源 (medicine/rare_alloy) |
-| `production` | 资源加成类 | production_bonus_percent | 庇护所资源产量提升 |
-| `companion` | 陪伴类 (美女/帅哥) | energy_recover_bonus_percent, explore_attempts_bonus | 主角精力恢复加快 → 每日可探索更多次 |
-| `steward` | 管家类 | population_growth_bonus_percent | 加快庇护所聚集居民 (人口增长提速) |
+| NPC ID | 姓名 | npc_type | 属性 (体力/生存/智慧) | 被动 | 主动 |
+|---|---|---|---|---|---|
+| `npc.veteran_01` | 唐文轩 (老兵) | `veteran` | 8 / 7 / 4 | 【觅食专长】提升全队获取食物的速度 | 【紧急搜刮】一次性获得一定数量食物 |
+| `npc.medic_01` | 张睿 (医师) | `medic` | 4 / 6 / 9 | 【应急救护】减少外出任务里幸存者的伤亡概率 | 【集中救治】一次性治疗一定数量受伤幸存者 |
+| `npc.engineer_01` | 吴齐越 (工程师) | `engineer` | 5 / 5 / 10 | 【城防强化】提升据点城防的攻击威力 | 【机械守卫】召唤一台具备攻击力的机器人协助战斗 |
 
-开局四人组: `npc.guard_01 铁牛` / `npc.gatherer_01 老葛` / `npc.companion_01 苏晚` / `npc.steward_01 陈姨`。
+- 三人熟悉度均 35; 属性值上限 10 (展示为属性条 `TextureProgressBar` max=10, 见 B4.2)
+- 数值/文案唯一数据源: CONF `npcs/*.conf` + `src/ui/btn_recruit.gd` 的 `NPC_DATA` 字典 (S1 UI 层, S2 起迁 CONF)
+- (旧"铁牛/老葛/苏晚/陈姨"四选一设定已作废, 被本表覆盖)
 
 ### A10. 野外资源 (搜刮节点) (原 SPEC J)
 
@@ -687,7 +690,7 @@ boot.tscn → login.tscn → main.tscn ⇄ shelter_interior.tscn
 | 仓库 | WarehouseButton | 游戏仓库 | resource (+building 容量) |
 | 出城 | OutCityButton | 出城新地图 | map + location |
 | 探索 | ExploreButton | 探索挂机 (见 A12.1) | exploration + loot |
-| 招募 | RecruitButton | 招募 NPC | npc + survivor |
+| 招募 | Btn_Recruit | 招募 NPC (木板卡片面板, 见 B4.2) | npc + survivor (UI 壳) |
 | 进入 | EnterShelterButton | 进入庇护所 → shelter_interior.tscn | shelter (已开) |
 
 交互规则:
@@ -699,7 +702,8 @@ boot.tscn → login.tscn → main.tscn ⇄ shelter_interior.tscn
   缺文件回退 shelter_level1, 仍缺则隐藏 (`_shelter_overlay_texture()`)
   — 用户后续重新生成庇护所图覆盖同名文件即换图
 - **任务**: 点击弹出**任务卷轴面板 TaskPanel** (见 B4.1; quest 系统 OFF, UI 壳+占位内容)
-- **4 占位按钮** (仓库/出城/探索/招募): S1 纯占位零逻辑, 点击 →
+- **招募**: 点击开/关**招募面板** (木板卡片三选一, 见 B4.2; npc 系统 OFF, UI 壳+静态状态)
+- **3 占位按钮** (仓库/出城/探索): S1 纯占位零逻辑, 点击 →
   StatusLabel 显示 `后续版本开放: X`; 各系统开启后逐个接管 (禁用系统零初始化, 不建系统对象)
 - **进入**: change_scene → shelter_interior.tscn
 - **升级只在庇护所室内** (B5), 世界界面不提供升级入口
@@ -723,6 +727,34 @@ boot.tscn → login.tscn → main.tscn ⇄ shelter_interior.tscn
 - **持久化**: 存档快照加 `quest: {accepted: [id, ...]}` (SaveManager 无 schema 直存),
   保存/读档 (设置弹层 game_menu + 登录读档弹层) 时写入/恢复
 
+### B4.2 招募面板 (BtnRecruit, 木板卡片三选一)
+
+用户定稿 2026-10 (完整规格): 招募按钮 `Btn_Recruit` (挂 `src/ui/btn_recruit.gd`, class_name `BtnRecruit`)
+点击开/关面板, **面板默认隐藏**; 面板常驻场景根 (`RecruitPanel` visible 开关, 不销毁):
+
+- **遮罩**: 全屏半透明深色 `ColorRect` (`Mask`, 黑 α0.55), 点击遮罩关闭面板
+- **弹窗容器**: 居中 `RecruitBox` (PanelContainer, **1400×700**, 深色圆角), 内含
+  `CardRow` HBox 横排等距 3 张卡片
+- **NPC 木板卡片** (`NpcCard_1~3`, PanelContainer **380×620**, 节点名 = 测试契约):
+  1. 卡底 `BoardBg` = `assets/npc_recruit/board.png` 木板铺满 (STRETCH_SCALE)
+  2. 顶部居中 `Diamond_N` 80×80 紫钻 `diamond_purple.png` (路径存字典, 可换钻色)
+  3. `NpcName_N` 姓名 (大) + `NpcTitle_N` 职业 (中)
+  4. `Familiarity_N` 熟悉度 (中)
+  5. 属性条区 `AttrRow_N_i` 最多 3 条: 属性名 + `AttrBar_N_i` (`TextureProgressBar`
+     **max=10 固定**, texture_under/texture_progress = bar_under/bar_fill.png 九宫格) + 数值
+  6. `Desc_N` 背景描述 (小号多行 AUTOWRAP_WORD_SMART)
+  7. `PassiveTitle_N`/`PassiveDesc_N` 被动技能 + `ActiveTitle_N`/`ActiveDesc_N` 主动技能
+- **样式**: 全锚点容器布局 (CenterContainer/Margin/VBox, 不写死坐标); 文本深棕
+  (BROWN_DARK #4A2F14 / BROWN_TEXT) 适配木板废土风
+- **NPC 数据**: `btn_recruit.gd` 的 `NPC_DATA` 字典 = 唯一数据源 (姓名/职业/熟悉度/属性/
+  背景/被动/主动/钻石路径), 改数值/换钻石/改文案只动字典; 三人数据见 A9.3
+- **整卡点选 (开局 3 选 1)**: 规格卡片版式 ①~⑥ 封闭无选择按钮 → **点整卡选定**;
+  已选卡加深棕描边 (StyleBoxFlat 3px 边框), 状态存 `BtnRecruit` 静态内存态
+  (`_picked` 存姓名, 跨场景保留; **不建 NpcSystem** — npc 开关 OFF 零初始化);
+  新游戏 `BtnRecruit.reset()`
+- **持久化**: 存档快照加 `recruit: {picked: "<NPC姓名>"}`, 保存/读档 (设置弹层 game_menu
+  + 登录读档弹层) 时写入/恢复
+
 ### B5. shelter_interior.tscn (庇护所内部)
 
 - 背景 `blank_interior_1920x1080.png`; 全代码 UI 壳 (tscn 只放根节点)
@@ -743,7 +775,8 @@ boot.tscn → login.tscn → main.tscn ⇄ shelter_interior.tscn
 - 登录/主界面两个入口; Esc 或关闭按钮退出; 重开游戏保留上次设置
 - **游戏菜单段** (`open(parent, game_menu=true)`, 仅主界面入口带):
   `SlotOption` 3 存档槽 + `SaveButton` 保存进度 + `LoadButton` 读取进度
-  (快照 `{shelter, time, quest}` → SaveManager, 读档 set_state + TaskPanel.set_accepted 后刷新) +
+  (快照 `{shelter, time, quest, recruit}` → SaveManager, 读档 set_state + TaskPanel.set_accepted
+  + BtnRecruit.set_picked 后刷新) +
   `MenuStatusLabel` 结果文本 + `BackToTitleButton` 返回标题 (→ login.tscn);
   登录入口 `open(parent)` 不带该段
 
@@ -753,6 +786,9 @@ boot.tscn → login.tscn → main.tscn ⇄ shelter_interior.tscn
   面板类 512×512), 用户后续**直接覆盖同名文件**填实际 UI, 代码零改动。
   现有: blank_login / blank_lv1~lv3 / blank_interior _1920x1080.png + blank_room_panel_512x512.png
   + blank_scroll_1400x900.png (任务卷轴, 发黄纯色)
+- **招募面板素材** (非 blank 命名, 同样覆盖即换图): `assets/npc_recruit/`
+  board.png (380×620 木板棕) / diamond_purple.png (80×80 紫钻) /
+  bar_under.png + bar_fill.png (16×16 属性条底/填充, 九宫格)
 - **地图图 (用户定稿)**: `assets/map/first_scene.png` = 进游戏第一屏恒定世界底图 (2848×1600);
   `assets/shelter/shelter_level%d.png` = 庇护所图 (2304×1728, 按等级 1~12 命名),
   位置/大小不在图里, 在 main.tscn 的 MapBackground / ShelterLayer 两个实体 TextureRect 节点上

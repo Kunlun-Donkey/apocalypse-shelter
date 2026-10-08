@@ -124,7 +124,6 @@ func _build_ui() -> void:
 		["WarehouseButton", "仓库"],
 		["OutCityButton", "出城"],
 		["ExploreButton", "探索"],
-		["RecruitButton", "招募"],
 	]
 	for item: Array in placeholders:
 		var btn := Button.new()
@@ -137,6 +136,16 @@ func _build_ui() -> void:
 		btn.pressed.connect(_on_placeholder_pressed.bind(str(item[1])))
 		ButtonSkin.apply(btn)
 		bottom_bar.add_child(btn)
+
+	var recruit_button := BtnRecruit.new()
+	recruit_button.name = "Btn_Recruit"
+	recruit_button.text = "招募"
+	recruit_button.custom_minimum_size = Vector2(0, 68)
+	recruit_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	recruit_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	recruit_button.add_theme_font_size_override("font_size", 26)
+	ButtonSkin.apply(recruit_button)
+	bottom_bar.add_child(recruit_button)
 
 	var enter_shelter_button := Button.new()
 	enter_shelter_button.name = "EnterShelterButton"

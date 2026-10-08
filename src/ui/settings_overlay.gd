@@ -212,6 +212,7 @@ func _on_save_pressed() -> void:
 		"shelter": shelter.get_state(),
 		"time": TimeManager.get_state(),
 		"quest": {"accepted": TaskPanel.get_accepted()},
+		"recruit": {"picked": BtnRecruit.get_picked()},
 	}
 	var err := SaveManager.save_game(slot, data)
 	_menu_status.text = "保存成功 (存档 %d)" % slot if err == OK else "保存失败 (错误 %d)" % err
@@ -228,6 +229,8 @@ func _on_load_pressed() -> void:
 	TimeManager.set_state(data.get("time", {}))
 	var quest: Dictionary = data.get("quest", {})
 	TaskPanel.set_accepted(quest.get("accepted", []))
+	var recruit: Dictionary = data.get("recruit", {})
+	BtnRecruit.set_picked(str(recruit.get("picked", "")))
 	_menu_status.text = "已读取存档 %d" % slot
 
 

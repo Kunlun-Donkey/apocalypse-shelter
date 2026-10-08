@@ -149,6 +149,7 @@ func _on_new_game() -> void:
 	shelter.new_game()
 	TimeManager.new_game()
 	TaskPanel.reset()
+	BtnRecruit.reset()
 	get_tree().change_scene_to_file(MAIN_SCENE)
 
 
@@ -176,6 +177,8 @@ func _load_slot(slot: int) -> void:
 	TimeManager.set_state(data.get("time", {}))
 	var quest: Dictionary = data.get("quest", {})
 	TaskPanel.set_accepted(quest.get("accepted", []))
+	var recruit: Dictionary = data.get("recruit", {})
+	BtnRecruit.set_picked(str(recruit.get("picked", "")))
 	get_tree().change_scene_to_file(MAIN_SCENE)
 
 
