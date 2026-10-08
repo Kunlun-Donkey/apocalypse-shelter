@@ -3,10 +3,10 @@ extends Node
 # 世界/室内场景导航验证 (headless):
 #   godot --headless --path . res://tests/dev_s1_inttest.tscn
 # 覆盖: 登录"开始新游戏" → Main (顶部资源条/等级 + 底部 6 功能按钮)
-#       → 5 占位按钮提示 "后续版本开放: X"
+#       → 任务卷轴面板 (列表 任务1~10/详情/接受/放弃) + 4 占位按钮提示 "后续版本开放: X"
 #       → "进入" → ShelterInterior (一房一床 RoomPanel_1/BedLabel + 升级区)
 #       → 室内升级 30s 冷却 → BackButton 返回 Main
-#       → 设置弹层 game_menu 段 (存读档 3 槽/返回标题)
+#       → 设置弹层 game_menu 段 (存读档 3 槽/返回标题, 含 quest.accepted round-trip)
 # ============================================================
 
 var _failed := false
@@ -98,9 +98,8 @@ func _run() -> void:
 	var level_label := _find_by_name(main_scene, "LevelLabel") as Label
 	_check(level_label != null and level_label.text.begins_with("Lv1"), "顶部 LevelLabel 显示 Lv1")
 
-	# 5 占位按钮点击 → StatusLabel "后续版本开放: X"
+	# 4 占位按钮点击 → StatusLabel "后续版本开放: X" (任务/进入不是占位)
 	var placeholders: Array = [
-		["TaskButton", "任务"],
 		["WarehouseButton", "仓库"],
 		["OutCityButton", "出城"],
 		["ExploreButton", "探索"],
@@ -115,6 +114,47 @@ func _run() -> void:
 			var status := _find_by_name(main_scene, "StatusLabel") as Label
 			ok = status != null and status.text == "后续版本开放: %s" % str(item[1])
 		_check(ok, "点 %s 占位提示 '后续版本开放: %s'" % [str(item[1]), str(item[1])])
+
+	# ---- 任务面板 (发黄卷轴: 左列表 任务1~10 + 右详情 + 接受/放弃) ----
+	task_btn.pressed.emit()
+	await _settle()
+	var quest_panel := _find_by_name(main_scene, "TaskPanel")
+	_check(quest_panel != null, "点 任务 弹出卷轴任务面板 TaskPanel")
+	if quest_panel == null:
+		_abort()
+		return
+	_check(_find_by_name(quest_panel, "ScrollBg") != null, "任务面板含卷轴底图 ScrollBg")
+	var task_list := _find_by_name(quest_panel, "TaskList") as ItemList
+	_check(task_list != null and task_list.item_count == 10, "任务列表 10 条 (任务1~10 占位)")
+	var task_title := _find_by_name(quest_panel, "TaskTitle") as Label
+	_check(task_title != null and task_title.text == "任务1", "默认选中第一条显示 任务1 详情")
+	var accept_btn := _find_by_name(quest_panel, "AcceptButton") as Button
+	var abandon_btn := _find_by_name(quest_panel, "AbandonButton") as Button
+	_check(accept_btn != null and abandon_btn != null, "详情下有 接受任务/放弃任务 按钮")
+	if accept_btn == null or abandon_btn == null or task_list == null:
+		_abort()
+		return
+
+	accept_btn.pressed.emit()
+	await get_tree().process_frame
+	_check(task_list.get_item_text(0).contains("已接受"), "接受后列表项标记 已接受")
+	_check(TaskPanel.is_accepted("quest.placeholder_01"), "接受后状态进入 TaskPanel.accepted")
+
+	abandon_btn.pressed.emit()
+	await get_tree().process_frame
+	_check(task_list.get_item_text(0) == "任务1", "放弃后列表项清除 已接受 标记")
+	_check(not TaskPanel.is_accepted("quest.placeholder_01"), "放弃后状态移除")
+
+	accept_btn.pressed.emit()
+	await get_tree().process_frame
+	var quest_close := _find_by_name(quest_panel, "QuestCloseButton") as Button
+	_check(quest_close != null, "任务面板含关闭按钮")
+	if quest_close == null:
+		_abort()
+		return
+	quest_close.pressed.emit()
+	await _settle()
+	_check(_find_by_name(main_scene, "TaskPanel") == null, "关闭按钮收起任务面板")
 
 	if enter == null:
 		_abort()
@@ -193,6 +233,31 @@ func _run() -> void:
 	_check(_find_by_name(overlay, "MenuStatusLabel") != null, "游戏菜单含 MenuStatusLabel")
 	_check(_find_by_name(overlay, "BackToTitleButton") != null, "游戏菜单含 BackToTitleButton (返回标题)")
 	_check(_find_by_name(overlay, "FullscreenToggle") != null and _find_by_name(overlay, "VolumeSlider") != null, "设置原有 全屏/音量 保留")
+
+	# 存读档 round-trip: quest.accepted (任务接受状态) 写入并恢复
+	var slot_opt_menu := _find_by_name(overlay, "SlotOption") as OptionButton
+	if slot_opt_menu != null:
+		slot_opt_menu.select(2)  # 存档 3 (与 autotest 同槽, 测试专用)
+	var save_btn := _find_by_name(overlay, "SaveButton") as Button
+	_check(save_btn != null, "游戏菜单 SaveButton 可点")
+	if save_btn == null:
+		_abort()
+		return
+	save_btn.pressed.emit()
+	await get_tree().process_frame
+	var menu_status := _find_by_name(overlay, "MenuStatusLabel") as Label
+	_check(menu_status != null and menu_status.text.begins_with("保存成功"), "保存进度成功 (快照含 quest)")
+	TaskPanel.abandon("quest.placeholder_01")
+	var load_btn := _find_by_name(overlay, "LoadButton") as Button
+	_check(load_btn != null, "游戏菜单 LoadButton 可点")
+	if load_btn == null:
+		_abort()
+		return
+	load_btn.pressed.emit()
+	await get_tree().process_frame
+	menu_status = _find_by_name(overlay, "MenuStatusLabel") as Label
+	_check(menu_status != null and menu_status.text.begins_with("已读取"), "读取进度成功")
+	_check(TaskPanel.is_accepted("quest.placeholder_01"), "读档恢复 已接受 任务状态")
 
 	if _failed:
 		printerr("INTTEST: FAILED")

@@ -148,6 +148,7 @@ func _on_new_game() -> void:
 	var shelter := get_node("/root/ShelterSystem") as ShelterSystem
 	shelter.new_game()
 	TimeManager.new_game()
+	TaskPanel.reset()
 	get_tree().change_scene_to_file(MAIN_SCENE)
 
 
@@ -173,6 +174,8 @@ func _load_slot(slot: int) -> void:
 	var shelter := get_node("/root/ShelterSystem") as ShelterSystem
 	shelter.set_state(data.get("shelter", {}))
 	TimeManager.set_state(data.get("time", {}))
+	var quest: Dictionary = data.get("quest", {})
+	TaskPanel.set_accepted(quest.get("accepted", []))
 	get_tree().change_scene_to_file(MAIN_SCENE)
 
 

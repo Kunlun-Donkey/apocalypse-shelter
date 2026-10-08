@@ -80,7 +80,7 @@ OFF: 其余全部 — 禁止实现、禁止初始化、禁止写 UI
    - 每级生效: population_cap / building_slots / storage_bonus / defense / production_bonus_percent (只存数值, 无消费方也无妨)
 4. **SaveSystem**: GameState { shelter_level, 升级冷却计时, 游戏时刻 } 序列化, 3 槽
 5. **TimeManager**: 游戏时钟 (1 游戏时 = 60 现实秒; 1 现实小时 ≈ 2.5 游戏天, 开局 2~3h 现实 = 5~7 游戏天 — 留存节奏见逻辑书 A5), 升级冷却计时用现实秒
-6. **最小 UI**: 世界界面 (底图+楼体叠层 / 顶部资源条+等级 / 底部 6 按钮: 任务/仓库/出城/探索/招募/进入, 前 5 个占位) + 庇护所内部 (一房一床 + 升级按钮+冷却显示) + 设置弹层游戏菜单 (存/读档)
+6. **最小 UI**: 世界界面 (底图+楼体叠层 / 顶部资源条+等级 / 底部 6 按钮: 任务/仓库/出城/探索/招募/进入, 任务=卷轴面板, 后 4 个占位) + 庇护所内部 (一房一床 + 升级按钮+冷却显示) + 设置弹层游戏菜单 (存/读档)
 7. **验收**: §2.5 全部勾掉
 
 ### 2.5 Dev-S1 出口标准 (全部满足才进 S2)
@@ -93,7 +93,7 @@ OFF: 其余全部 — 禁止实现、禁止初始化、禁止写 UI
 - [x] `system.conf` 中任一 OFF 系统未被初始化 (零初始化验证)  ← autotest
 
 自动回归入口: `tests/dev_s1_autotest.tscn` (23 项) + `dev_s1_navtest.tscn` (8 项跳转+资源条) +
-`dev_s1_settest.tscn` (11 项设置面板) + `dev_s1_inttest.tscn` (35 项世界/室内导航+占位提示+游戏菜单), headless 运行,
+`dev_s1_settest.tscn` (11 项设置面板) + `dev_s1_inttest.tscn` (50 项世界/室内导航+任务面板+游戏菜单), headless 运行,
 命令见 `.claude/skills/test/SKILL.md`。
 
 ## 3. Dev-S2 野外物资 + 资源 + 基础建筑

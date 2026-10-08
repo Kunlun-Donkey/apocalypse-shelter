@@ -95,9 +95,9 @@ func _build_ui() -> void:
 	_status_label.offset_bottom = -104
 	add_child(_status_label)
 
-	# ---- 底部一排 6 功能按钮 (等分, 点击前五个纯占位提示) ----
-	# 六按钮 → 系统映射 (对应 system.conf 当前全 OFF, 纯占位零逻辑):
-	#   任务=quest / 仓库=resource(+building 容量) / 出城=map+location /
+	# ---- 底部一排 6 功能按钮 (等分; 任务=卷轴面板, 进入=室内, 其余占位提示) ----
+	# 六按钮 → 系统映射 (system.conf 全 OFF, 除任务面板为 UI 壳外零逻辑):
+	#   任务=quest (TaskPanel 卷轴, 内容占位) / 仓库=resource(+building 容量) / 出城=map+location /
 	#   探索=exploration+loot / 招募=npc+survivor / 进入=shelter (已开)
 	var bottom_bar := HBoxContainer.new()
 	bottom_bar.name = "BottomBar"
@@ -109,8 +109,18 @@ func _build_ui() -> void:
 	bottom_bar.add_theme_constant_override("separation", 16)
 	add_child(bottom_bar)
 
+	var task_button := Button.new()
+	task_button.name = "TaskButton"
+	task_button.text = "任务"
+	task_button.custom_minimum_size = Vector2(0, 68)
+	task_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	task_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	task_button.add_theme_font_size_override("font_size", 26)
+	task_button.pressed.connect(_on_task_pressed)
+	ButtonSkin.apply(task_button)
+	bottom_bar.add_child(task_button)
+
 	var placeholders := [
-		["TaskButton", "任务"],
 		["WarehouseButton", "仓库"],
 		["OutCityButton", "出城"],
 		["ExploreButton", "探索"],
@@ -232,6 +242,10 @@ func _refresh() -> void:
 
 func _on_placeholder_pressed(what: String) -> void:
 	_status_label.text = "后续版本开放: %s" % what
+
+
+func _on_task_pressed() -> void:
+	TaskPanel.open(self)
 
 
 func _on_settings_pressed() -> void:

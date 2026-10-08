@@ -568,6 +568,9 @@ message = 发电机恢复运转。
 
 #### A14.1 任务体系 (quest) (原 N1)
 
+- **UI 现状 (S1)**: 任务卷轴面板 TaskPanel 已落地 (B4.1), 列表/详情/接受/放弃为 UI 壳 +
+  `task_panel.gd` 占位数组 (任务1~10), 接受状态随存档 `quest.accepted` 持久化;
+  真任务链/目标/奖励逻辑待 quest 系统开启 (S3+)
 - 任务链 (chain) + 目标 (objective) + 奖励 (reward), 全配置化
 - 任务可引用: 事件 (id_ref)、地点、敌人、资源、NPC
 - 分类: 主线 main / 支线 side / 日常 daily / 聚落请求 settlement
@@ -680,7 +683,7 @@ boot.tscn → login.tscn → main.tscn ⇄ shelter_interior.tscn
 
 | 按钮 | 节点名 | 功能 | 对应系统 (当前 system.conf 全 OFF) |
 |---|---|---|---|
-| 任务 | TaskButton | 游戏任务 | quest |
+| 任务 | TaskButton | 游戏任务 (卷轴面板, 见 B4.1) | quest (UI 壳) |
 | 仓库 | WarehouseButton | 游戏仓库 | resource (+building 容量) |
 | 出城 | OutCityButton | 出城新地图 | map + location |
 | 探索 | ExploreButton | 探索挂机 (见 A12.1) | exploration + loot |
@@ -695,12 +698,30 @@ boot.tscn → login.tscn → main.tscn ⇄ shelter_interior.tscn
   在 main.tscn 节点 ShelterLayer 上 (**Godot 编辑器拖拽摆位**, 存 tscn 即定稿),
   缺文件回退 shelter_level1, 仍缺则隐藏 (`_shelter_overlay_texture()`)
   — 用户后续重新生成庇护所图覆盖同名文件即换图
-- **5 占位按钮** (任务/仓库/出城/探索/招募): S1 纯占位零逻辑, 点击 →
+- **任务**: 点击弹出**任务卷轴面板 TaskPanel** (见 B4.1; quest 系统 OFF, UI 壳+占位内容)
+- **4 占位按钮** (仓库/出城/探索/招募): S1 纯占位零逻辑, 点击 →
   StatusLabel 显示 `后续版本开放: X`; 各系统开启后逐个接管 (禁用系统零初始化, 不建系统对象)
 - **进入**: change_scene → shelter_interior.tscn
 - **升级只在庇护所室内** (B5), 世界界面不提供升级入口
 - **存读档/返回标题**: 移入设置弹层游戏菜单段 (B6); main 只保留
   `level_changed` 监听刷新楼体图 + LevelLabel (读档/升级后刷新通道)
+
+### B4.1 任务面板 (TaskPanel, 卷轴弹层)
+
+用户定稿 2026-10: 任务不是占位提示, 点击**居中弹出发黄卷轴**面板 (典型任务面板):
+
+- **卷轴底图**: `assets/blank_scroll_1400x900.png` (纯色发黄占位, 用户覆盖同名文件换真卷轴图,
+  代码零改动; 节点 `ScrollBg`); Esc 或 `QuestCloseButton` 关闭
+- **左列 `TaskList`** (ItemList): 任务列表, 暂列 **任务1~任务10 占位**;
+  内容 = `src/ui/task_panel.gd` 的 `TASKS` 常量数组 (id=`quest.placeholder_01~10`),
+  用户后续直接改该数组; S2 起迁移 CONF-D `quest/*.conf`
+- **右列**: `TaskTitle` 标题 + `TaskDesc` 详情 (选中列表项即显示) +
+  **`AcceptButton` 接受任务 / `AbandonButton` 放弃任务** + `TaskStatusLabel` 状态行
+- **接受/放弃** (用户定稿: 状态+写入存档): 接受 → 列表项标记"(已接受)",
+  状态存 TaskPanel 静态内存态 (跨场景保留, **不建 QuestSystem** — quest 开关 OFF 零初始化);
+  放弃 → 清除标记; 新游戏 `TaskPanel.reset()`
+- **持久化**: 存档快照加 `quest: {accepted: [id, ...]}` (SaveManager 无 schema 直存),
+  保存/读档 (设置弹层 game_menu + 登录读档弹层) 时写入/恢复
 
 ### B5. shelter_interior.tscn (庇护所内部)
 
@@ -722,7 +743,7 @@ boot.tscn → login.tscn → main.tscn ⇄ shelter_interior.tscn
 - 登录/主界面两个入口; Esc 或关闭按钮退出; 重开游戏保留上次设置
 - **游戏菜单段** (`open(parent, game_menu=true)`, 仅主界面入口带):
   `SlotOption` 3 存档槽 + `SaveButton` 保存进度 + `LoadButton` 读取进度
-  (快照 `{shelter, time}` → SaveManager, 读档 set_state 后刷新) +
+  (快照 `{shelter, time, quest}` → SaveManager, 读档 set_state + TaskPanel.set_accepted 后刷新) +
   `MenuStatusLabel` 结果文本 + `BackToTitleButton` 返回标题 (→ login.tscn);
   登录入口 `open(parent)` 不带该段
 
@@ -731,6 +752,7 @@ boot.tscn → login.tscn → main.tscn ⇄ shelter_interior.tscn
 - **占位图 (用户定稿)**: 缺图处放 `blank_XX_宽x高.png` 纯色占位 (背景类 1920×1080,
   面板类 512×512), 用户后续**直接覆盖同名文件**填实际 UI, 代码零改动。
   现有: blank_login / blank_lv1~lv3 / blank_interior _1920x1080.png + blank_room_panel_512x512.png
+  + blank_scroll_1400x900.png (任务卷轴, 发黄纯色)
 - **地图图 (用户定稿)**: `assets/map/first_scene.png` = 进游戏第一屏恒定世界底图 (2848×1600);
   `assets/shelter/shelter_level%d.png` = 庇护所图 (2304×1728, 按等级 1~12 命名),
   位置/大小不在图里, 在 main.tscn 的 MapBackground / ShelterLayer 两个实体 TextureRect 节点上
