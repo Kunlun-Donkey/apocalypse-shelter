@@ -56,3 +56,18 @@ func load_game(slot: int) -> Dictionary:
 func erase_slot(slot: int) -> void:
 	if has_save(slot):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(_slot_path(slot)))
+
+
+# 最近一次存档的槽位 (按 saved_at 时间戳字符串比较), 无存档返回 0
+func find_latest_slot() -> int:
+	var best_slot := 0
+	var best_saved_at := ""
+	for slot in range(1, get_slot_count() + 1):
+		if not has_save(slot):
+			continue
+		var data := load_game(slot)
+		var saved_at := str(data.get("saved_at", ""))
+		if best_slot == 0 or saved_at > best_saved_at:
+			best_slot = slot
+			best_saved_at = saved_at
+	return best_slot

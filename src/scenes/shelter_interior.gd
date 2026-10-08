@@ -163,7 +163,10 @@ func _refresh() -> void:
 			unlocked += 1
 		else:
 			status_label.text = "未解锁 (升级解锁)"
-	_summary_label.text = "房间解锁 %d/5 | 升级庇护所解锁更多房间" % unlocked
+	if unlocked >= ROOM_COUNT:
+		_summary_label.text = "房间解锁 %d/%d | 已全部解锁" % [unlocked, ROOM_COUNT]
+	else:
+		_summary_label.text = "房间解锁 %d/%d | 升级庇护所解锁更多房间" % [unlocked, ROOM_COUNT]
 
 
 # ---------------- 交互 ----------------

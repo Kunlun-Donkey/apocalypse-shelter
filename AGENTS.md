@@ -229,8 +229,10 @@ project.godot 启动 (run/main_scene = src/scenes/boot.tscn)
 → boot.tscn: ConfigManager.load_all() 解析+校验依赖
    → 失败: printerr("CONFIG ERROR: ...") + quit(1) 终止, 不静默
 → 按开关初始化 System (挂 /root 常驻, 禁用系统零初始化)
-→ change_scene → login.tscn (新游戏 = ShelterSystem.new_game()+TimeManager.new_game();
-   读档 = set_state 恢复)
+→ change_scene → login.tscn (菜单垂直居中 5 按钮: 继续游戏 = 直接读最近存档进主界面
+   (SaveManager.find_latest_slot(), 无存档禁用) / 新的游戏 = ShelterSystem.new_game()
+   +TimeManager.new_game() / 读取存档 = SlotPanel 弹层选槽 (SlotButton_1~3+SlotBackButton,
+   空槽禁用) / 设置 (settings 开关门控) / 退出游戏。读档 = set_state 恢复)
 → change_scene → main.tscn (纯 UI 壳, 读 System 状态渲染)
 ```
 
