@@ -2,12 +2,13 @@ extends Node
 # ============================================================
 # ConfigManager (autoload, 最先加载) — CONF-D v2 解析 + 系统开关注册表
 # AGENTS.md §12.3: Godot ConfigFile 不接受不带引号的字符串值,
-# 因此本类自己做"原始读取"(节/键/原始字符串), 类型转换按 SPEC E3:
+# 因此本类自己做"原始读取"(节/键/原始字符串), 类型转换按逻辑书 D2.3:
 #   数组 [a, b] / 范围 10~30 / id:level / int / float / bool 自行解析
-# 错误处理按 SPEC E9: 配置坏了打印 CONFIG ERROR 并终止启动, 不静默。
+# 错误处理按逻辑书 D2.9: 配置坏了打印 CONFIG ERROR 并终止启动, 不静默。
 # ============================================================
 
 const SYSTEM_CONF_PATH := "res://configs/system.conf"
+const RESOURCE_REGISTRY_PATH := "res://configs/resources/resource.conf"
 const CONF_VERSION := 1
 
 # path -> { section -> { key -> raw string } }
@@ -78,6 +79,37 @@ func get_initial_state() -> Dictionary:
 	return _shelter_base.get("initial_state", {})
 
 
+# ---------------- 资源条展示 (纯 UI, 不建 ResourceSystem) ----------------
+# S1 resource=false 零初始化纪律: 本函数只读 dormant CONF 做静态展示
+# (名称/基础容量), 不做资源池/产消/容量结算; S2 ResourceSystem 开启后接管。
+# 返回 [{key, name, base_capacity}], 仅收 storable 的 stock 资源 (排除 power 流转)。
+
+func get_resource_display_items() -> Array:
+	var out: Array = []
+	if _load_raw(RESOURCE_REGISTRY_PATH) != OK:
+		return out
+	var files := parse_list(_section(RESOURCE_REGISTRY_PATH, "registry").get("files", ""))
+	for file_rel in files:
+		var path := "res://configs/" + str(file_rel).strip_edges()
+		if _load_raw(path) != OK:
+			continue
+		var flow := _section(path, "flow")
+		if not _parse_bool(flow.get("storable", ""), false):
+			continue
+		if str(flow.get("flow_type", "")).strip_edges() != "stock":
+			continue
+		var id := str(_section(path, "meta").get("id", "")).strip_edges()
+		var key := id.substr(id.find(".") + 1) if id.contains(".") else id
+		if key.is_empty():
+			continue
+		out.append({
+			"key": key,
+			"name": str(_section(path, "base").get("name", key)).strip_edges(),
+			"base_capacity": _parse_int(flow.get("base_capacity", ""), 0),
+		})
+	return out
+
+
 # ============================================================
 # CONF-D v2 原始读取 + 类型解析
 # ============================================================
@@ -91,9 +123,10 @@ func _load_raw(path: String) -> int:
 	var sections := {}
 	var current := ""
 	var line_no := 0
-	for raw_line in file.get_as_text().split("\n"):
+	var raw_lines := file.get_as_text().split("\n")
+	while line_no < raw_lines.size():
 		line_no += 1
-		var line := _strip_comment(raw_line).strip_edges()
+		var line := _strip_comment(raw_lines[line_no - 1]).strip_edges()
 		if line.is_empty():
 			continue
 		if line.begins_with("[") and line.ends_with("]"):
@@ -110,12 +143,18 @@ func _load_raw(path: String) -> int:
 			return _fail("ConfigError: %s:%d key outside any [section]: %s" % [path, line_no, line])
 		var key := line.substr(0, eq).strip_edges()
 		var value := line.substr(eq + 1).strip_edges()
+		# 多行数组: 值以 "[" 开头但未闭合 → 续读后续行拼接直到 "]" (逻辑书 D2.3)
+		while value.begins_with("[") and not value.ends_with("]") and line_no < raw_lines.size():
+			line_no += 1
+			var next := _strip_comment(raw_lines[line_no - 1]).strip_edges()
+			if not next.is_empty():
+				value = "%s %s" % [value, next]
 		sections[current][key] = value
 	_raw[path] = sections
 	return OK
 
 
-# 去掉行内注释: ';' 在行首或前面是空白 → 其后为注释 (SPEC E2)
+# 去掉行内注释: ';' 在行首或前面是空白 → 其后为注释 (逻辑书 D2.2)
 func _strip_comment(line: String) -> String:
 	var idx := 0
 	while idx < line.length():
@@ -130,7 +169,7 @@ func _section(path: String, section: String) -> Dictionary:
 	return _raw.get(path, {}).get(section, {})
 
 
-# id_list: "[a.b, c.d]" -> ["a.b", "c.d"]; "[]" -> []
+# id_list: "[a.b, c.d]" -> ["a.b", "c.d"]; "[]" -> []; 尾逗号空项忽略
 static func parse_list(raw: String) -> Array:
 	var text := raw.strip_edges()
 	if text.begins_with("[") and text.ends_with("]"):
@@ -139,7 +178,9 @@ static func parse_list(raw: String) -> Array:
 		return []
 	var out: Array = []
 	for item in text.split(","):
-		out.append(item.strip_edges())
+		var entry := item.strip_edges()
+		if not entry.is_empty():
+			out.append(entry)
 	return out
 
 
@@ -229,7 +270,7 @@ func _load_system_conf() -> int:
 	if not _engine.has("real_seconds_per_game_hour"):
 		return _fail("ConfigError: system.conf [engine] missing core field real_seconds_per_game_hour")
 
-	# [dependencies] 硬依赖校验 (SPEC E9 MissingDependency)
+	# [dependencies] 硬依赖校验 (逻辑书 D2.9 MissingDependency)
 	for system_name in _systems:
 		if not _systems[system_name]:
 			continue
