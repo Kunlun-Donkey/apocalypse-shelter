@@ -1,7 +1,7 @@
 extends Control
 # ============================================================
 # Main — Dev-S1 世界界面 (顶部资源条 + 底部功能按钮, 逻辑书 B4)
-# 顶部 HUD 通栏: 资源条 + spacer + 等级 LevelLabel + 时间 + 设置
+# 顶部 HUD 通栏: 资源条 + 人口/天气面板 + spacer + 等级 LevelLabel + 日夜图标 + 时间 + 设置
 # 底部一排 6 功能按钮 BottomBar + 其上提示行 StatusLabel
 #   升级/存读档已移出 main: 升级只在庇护所室内 (interior), 存读档/返回标题在设置弹层 game_menu 段
 #   level_changed 仍是读档/升级后刷新楼体+等级的唯一通道
@@ -11,6 +11,13 @@ extends Control
 
 const INTERIOR_SCENE := "res://src/scenes/shelter_interior.tscn"
 
+# 天气占位轮换表 (按游戏日确定; 天气系统未开, 纯 UI 壳, S2+ 天气系统接管)
+const WEATHERS := ["晴", "多云", "小雨", "雾"]
+const DAY_ICON := "res://assets/hud/day_icon.png"
+const NIGHT_ICON := "res://assets/hud/night_icon.png"
+const DAY_START_HOUR := 6.0
+const DAY_END_HOUR := 18.0
+
 var _shelter: ShelterSystem
 
 var _bg: TextureRect
@@ -19,6 +26,11 @@ var _level_label: Label
 var _time_label: Label
 var _status_label: Label
 var _resource_value_labels: Dictionary = {}  # key -> Label
+var _population_label: Label
+var _weather_label: Label
+var _day_night_icon: TextureRect
+var _day_texture: Texture2D
+var _night_texture: Texture2D
 
 
 func _ready() -> void:
@@ -33,6 +45,8 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	_time_label.text = TimeManager.get_time_text()
+	_weather_label.text = _weather_text()
+	_refresh_day_night()
 
 
 # ---------------- UI ----------------
@@ -58,6 +72,8 @@ func _build_ui() -> void:
 	hud.add_child(hud_row)
 
 	_build_resource_bar(hud_row)
+	_build_population_panel(hud_row)
+	_build_weather_panel(hud_row)
 
 	var hud_spacer := Control.new()
 	hud_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -68,6 +84,8 @@ func _build_ui() -> void:
 	_level_label.add_theme_font_size_override("font_size", 28)
 	_level_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	hud_row.add_child(_level_label)
+
+	_build_day_night_icon(hud_row)
 
 	_time_label = Label.new()
 	_time_label.add_theme_font_size_override("font_size", 28)
@@ -214,6 +232,86 @@ func _refresh_resource_bar() -> void:
 		label.text = "%d/%d" % [amount, capacity]
 
 
+# 人口面板 (纯 UI 展示): "人口: 当前/上限" — 当前=initial_population, 上限=等级 population_cap
+# survivor 系统开启后接管 (S1 零初始化, 不建 SurvivorSystem)
+func _build_population_panel(parent: Node) -> void:
+	var panel := PanelContainer.new()
+	panel.name = "PopulationPanel"
+	panel.add_theme_stylebox_override("panel", _hud_chip_style())
+	parent.add_child(panel)
+
+	_population_label = Label.new()
+	_population_label.name = "PopulationLabel"
+	_population_label.add_theme_font_size_override("font_size", 22)
+	_population_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	panel.add_child(_population_label)
+
+
+# 天气面板 (纯 UI 壳): "天气: X" — 按游戏日轮换 WEATHERS 占位, 天气系统未开
+func _build_weather_panel(parent: Node) -> void:
+	var panel := PanelContainer.new()
+	panel.name = "WeatherPanel"
+	panel.add_theme_stylebox_override("panel", _hud_chip_style())
+	parent.add_child(panel)
+
+	_weather_label = Label.new()
+	_weather_label.name = "WeatherLabel"
+	_weather_label.add_theme_font_size_override("font_size", 22)
+	_weather_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	panel.add_child(_weather_label)
+
+
+# 日夜图标 (时间旁): 6:00~18:00 白天 day_icon.png, 其余夜晚 night_icon.png (占位可覆盖)
+func _build_day_night_icon(parent: Node) -> void:
+	_day_texture = _load_icon(DAY_ICON)
+	_night_texture = _load_icon(NIGHT_ICON)
+	_day_night_icon = TextureRect.new()
+	_day_night_icon.name = "DayNightIcon"
+	_day_night_icon.custom_minimum_size = Vector2(48, 48)
+	_day_night_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_day_night_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_day_night_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	parent.add_child(_day_night_icon)
+
+
+func _hud_chip_style() -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.05, 0.07, 0.1, 0.85)
+	style.corner_radius_top_left = 10
+	style.corner_radius_top_right = 10
+	style.corner_radius_bottom_left = 10
+	style.corner_radius_bottom_right = 10
+	style.content_margin_left = 20
+	style.content_margin_right = 20
+	style.content_margin_top = 10
+	style.content_margin_bottom = 10
+	return style
+
+
+func _load_icon(path: String) -> Texture2D:
+	if not ResourceLoader.exists(path):
+		return null
+	return load(path) as Texture2D
+
+
+func _weather_text() -> String:
+	return "天气: %s" % WEATHERS[(TimeManager.get_game_day() - 1) % WEATHERS.size()]
+
+
+func _refresh_population() -> void:
+	var init: Dictionary = ConfigManager.get_initial_state()
+	var stats: Dictionary = _shelter.get_level_stats()
+	var current: int = int(init.get("initial_population", 0))
+	var cap: int = int(stats.get("population_cap", 0))
+	_population_label.text = "人口: %d/%d" % [current, cap]
+
+
+func _refresh_day_night() -> void:
+	var hour := TimeManager.get_hour_of_day()
+	var is_day := hour >= DAY_START_HOUR and hour < DAY_END_HOUR
+	_day_night_icon.texture = _day_texture if is_day else _night_texture
+
+
 # ---------------- 刷新 ----------------
 
 # 登录点"进入游戏"后主场景底图: assets/map/first_scene.png (恒定世界图, 不随等级变)
@@ -243,8 +341,11 @@ func _refresh() -> void:
 	_shelter_layer.texture = _shelter_overlay_texture()
 	_shelter_layer.visible = _shelter_layer.texture != null
 	_refresh_resource_bar()
+	_refresh_population()
 	_level_label.text = "Lv%d %s" % [_shelter.current_level, _shelter.get_level_name()]
 	_time_label.text = TimeManager.get_time_text()
+	_weather_label.text = _weather_text()
+	_refresh_day_night()
 
 
 # ---------------- 交互 ----------------

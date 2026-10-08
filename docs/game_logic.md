@@ -679,7 +679,12 @@ boot.tscn → login.tscn → main.tscn ⇄ shelter_interior.tscn
 1. **顶部 HUD 通栏** (TopHud, 横贯全宽): 左侧资源条 ResourceBar — wood / steel / food / water
    四格 (节点 `ResourceItem_<id>` + `ResourceName_<id>` + `ResourceValue_<id>`),
    每格显示 **当前数/库存上限** (`200/200` 格式) — 纯 CONF 展示, 数据口径见 A6.4;
-   右侧 **等级标签 LevelLabel (`LvN 名称`)** + 游戏时间标签 (TimeManager.get_time_text()) + 设置按钮
+   其右 **人口面板 PopulationPanel** (`PopulationLabel`="人口: 当前/上限", 当前=shelter.conf
+   `initial_population`, 上限=等级 `population_cap`, survivor 系统开启后接管) +
+   **天气面板 WeatherPanel** (`WeatherLabel`="天气: X", 按游戏日轮换 晴/多云/小雨/雾 占位,
+   天气系统未开纯 UI 壳); 右侧 **等级标签 LevelLabel (`LvN 名称`)** +
+   **日夜图标 DayNightIcon** (6:00~18:00 `day_icon.png` / 其余 `night_icon.png`,
+   48×48 随游戏时刻切换) + 游戏时间标签 (TimeManager.get_time_text()) + 设置按钮
 2. **中央**: 底图 `assets/map/first_scene.png` (恒定世界图) + 庇护所图按等级换景
    (不放 UI, 等级变化一眼可见; 口径见下方"底图+庇护所图")
 3. **底部一排 6 功能按钮** (BottomBar, 等分, 节点名 = 测试契约) + 其上提示行 StatusLabel:
@@ -789,6 +794,8 @@ boot.tscn → login.tscn → main.tscn ⇄ shelter_interior.tscn
 - **招募面板素材** (非 blank 命名, 同样覆盖即换图): `assets/npc_recruit/`
   board.png (380×620 木板棕) / diamond_purple.png (80×80 紫钻) /
   bar_under.png + bar_fill.png (16×16 属性条底/填充, 九宫格)
+- **HUD 图标** (同覆盖即换图): `assets/hud/` day_icon.png (64×64 太阳) /
+  night_icon.png (64×64 弯月) — 顶部日夜图标用
 - **地图图 (用户定稿)**: `assets/map/first_scene.png` = 进游戏第一屏恒定世界底图 (2848×1600);
   `assets/shelter/shelter_level%d.png` = 庇护所图 (2304×1728, 按等级 1~12 命名),
   位置/大小不在图里, 在 main.tscn 的 MapBackground / ShelterLayer 两个实体 TextureRect 节点上

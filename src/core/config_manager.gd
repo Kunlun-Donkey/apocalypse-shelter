@@ -333,6 +333,7 @@ func _parse_initial_state(path: String) -> Dictionary:
 		"initial_resource_steel": _parse_int(init.get("initial_resource_steel", ""), 0),
 		"initial_resource_food": _parse_int(init.get("initial_resource_food", ""), 0),
 		"initial_resource_water": _parse_int(init.get("initial_resource_water", ""), 0),
+		"initial_population": _parse_int(init.get("initial_population", ""), 0),
 		"starter_npcs": parse_list(init.get("starter_npcs", "[]")),
 	}
 

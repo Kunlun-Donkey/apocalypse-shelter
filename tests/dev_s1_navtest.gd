@@ -4,6 +4,7 @@ extends Node
 #   godot --headless --path . res://tests/dev_s1_navtest.tscn
 # 覆盖: "开始新游戏"按钮 → 切换到 Main 场景 + 状态重置 (Lv1 / 第1天08:00)
 #       + 顶部资源条 ResourceBar (wood/steel/food/water = 初始资源/库存上限)
+#       + 人口面板 (人口: 3/5) / 天气面板 (按游戏日轮换) / 日夜图标 (08:00 日 / 22:00 夜)
 # ============================================================
 
 var _failed := false
@@ -97,6 +98,28 @@ func _run() -> void:
 		)
 	_check(items_ok, "资源条含 wood/steel/food/water 四项")
 	_check(values_ok, "资源条数值 = 初始资源/库存上限")
+
+	# 顶部新增: 人口面板 / 天气面板 / 日夜图标 (逻辑书 B4)
+	var pop := _find_by_name(scene, "PopulationLabel") as Label
+	_check(scene != null and _find_by_name(scene, "PopulationPanel") != null and pop != null,
+		"顶部存在人口面板 PopulationPanel")
+	_check(pop != null and pop.text == "人口: 3/5", "人口面板 = 人口: 3/5 (initial_population/population_cap)")
+	var weather := _find_by_name(scene, "WeatherLabel") as Label
+	_check(scene != null and _find_by_name(scene, "WeatherPanel") != null and weather != null,
+		"顶部存在天气面板 WeatherPanel")
+	_check(weather != null and weather.text == "天气: 晴", "第 1 天天气 = 天气: 晴 (WEATHERS 轮换)")
+	var icon := _find_by_name(scene, "DayNightIcon") as TextureRect
+	_check(icon != null and icon.texture != null, "顶部存在日夜图标 DayNightIcon")
+	var icon_ok := false
+	if icon != null and icon.texture != null:
+		icon_ok = (icon.texture as Texture2D).resource_path.ends_with("day_icon.png")
+	_check(icon_ok, "08:00 显示白天图标 day_icon.png")
+	TimeManager.game_hours = 22.0
+	await get_tree().process_frame
+	icon_ok = false
+	if icon != null and icon.texture != null:
+		icon_ok = (icon.texture as Texture2D).resource_path.ends_with("night_icon.png")
+	_check(icon_ok, "22:00 切换夜晚图标 night_icon.png")
 
 	if _failed:
 		printerr("NAVTEST: FAILED")
