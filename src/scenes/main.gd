@@ -1,8 +1,9 @@
 extends Control
 # ============================================================
-# Main — Dev-S1 最小游戏界面 (场景背景 assets/blank_lvN_1920x1080.png, 按等级切换, 后续填实际 UI 资源)
-# 三区布局 (用户选定): 顶部 HUD 通栏 (资源条+时间/设置) / 左侧信息面板 (等级/数值/升级/存读档)
-# 中央留给庇护所全景换景 / 右下"进入庇护所"按钮 (逻辑书 B4)
+# Main — Dev-S1 最小游戏界面 (三区布局, 逻辑书 B4)
+# 顶部 HUD 通栏 (资源条+时间/设置) / 左侧信息面板 (等级/数值/升级/存读档) / 右下"进入庇护所"按钮
+# 中央 = main.tscn 实体节点 MapBackground (first_scene.png 世界底图) + ShelterLayer (庇护所图 shelter_level%d.png)
+#   庇护所图位置/大小在 Godot 编辑器里拖拽摆位, 存 tscn 即定稿 (用户后续生成覆盖)
 # ============================================================
 
 const LOGIN_SCENE := "res://src/scenes/login.tscn"
@@ -11,6 +12,7 @@ const INTERIOR_SCENE := "res://src/scenes/shelter_interior.tscn"
 var _shelter: ShelterSystem
 
 var _bg: TextureRect
+var _shelter_layer: TextureRect
 var _title_label: Label
 var _level_label: Label
 var _progress_label: Label
@@ -27,6 +29,9 @@ var _resource_value_labels: Dictionary = {}  # key -> Label
 
 func _ready() -> void:
 	_shelter = get_node("/root/ShelterSystem") as ShelterSystem
+	_bg = get_node("MapBackground") as TextureRect
+	_shelter_layer = get_node("ShelterLayer") as TextureRect
+	_bg.texture = _map_bg_texture()
 	_build_ui()
 	_shelter.upgrade_started.connect(_on_upgrade_started)
 	_shelter.upgrade_completed.connect(_on_upgrade_completed)
@@ -43,13 +48,7 @@ func _process(_delta: float) -> void:
 # ---------------- UI ----------------
 
 func _build_ui() -> void:
-	_bg = TextureRect.new()
-	_bg.texture = _level_bg_texture()
-	_bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(_bg)
-
+	# 底图 MapBackground / 楼体 ShelterLayer 是 main.tscn 实体节点 (编辑器拖拽摆位), 这里只搭 UI
 	# ---- 顶部 HUD 通栏: 左资源条 + 右时间/设置 (三区布局) ----
 	var hud := PanelContainer.new()
 	hud.name = "TopHud"
@@ -256,16 +255,28 @@ func _refresh_resource_bar() -> void:
 
 # ---------------- 刷新 ----------------
 
-# 场景图按庇护所等级取: blank_lvN_1920x1080.png, 缺文件回退 Lv1 (实际 UI 资源直接覆盖同名文件)
-func _level_bg_texture() -> Texture2D:
-	var level_path := "res://assets/blank_lv%d_1920x1080.png" % _shelter.current_level
-	if not ResourceLoader.exists(level_path):
-		level_path = "res://assets/blank_lv1_1920x1080.png"
-	return load(level_path) as Texture2D
+# 进游戏第一屏底图: assets/map/first_scene.png (恒定世界图, 不随等级变; 缺图回退 blank_lv1)
+func _map_bg_texture() -> Texture2D:
+	var path := "res://assets/map/first_scene.png"
+	if not ResourceLoader.exists(path):
+		path = "res://assets/blank_lv1_1920x1080.png"
+	return load(path) as Texture2D
+
+
+# 庇护所图: assets/shelter/shelter_level%d.png 按等级取 (位置/大小在 main.tscn 编辑器里摆)
+# 缺文件回退 shelter_level1, 仍缺则隐藏 (用户后续重新生成覆盖)
+func _shelter_overlay_texture() -> Texture2D:
+	var path := "res://assets/shelter/shelter_level%d.png" % _shelter.current_level
+	if not ResourceLoader.exists(path):
+		path = "res://assets/shelter/shelter_level1.png"
+	if not ResourceLoader.exists(path):
+		return null
+	return load(path) as Texture2D
 
 
 func _refresh() -> void:
-	_bg.texture = _level_bg_texture()
+	_shelter_layer.texture = _shelter_overlay_texture()
+	_shelter_layer.visible = _shelter_layer.texture != null
 	_refresh_resource_bar()
 	var base: Dictionary = ConfigManager.get_shelter_base()
 	_title_label.text = str(base.get("name", ""))

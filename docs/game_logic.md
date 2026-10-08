@@ -673,13 +673,18 @@ boot.tscn → login.tscn → main.tscn ⇄ shelter_interior.tscn
 2. **左侧信息面板** (PanelContainer, 从左上 HUD 下方起): 庇护所名称 / `LvN 名称` /
    满级进度 X/12 / 数值行 (人口上限 | 建筑位 | 防御, 产量加成 | 仓储加成) /
    升级按钮 / 冷却提示 / 状态文本 / 保存·读档 (OptionButton 选槽 + 保存 + 读档) / 返回标题
-3. **中央**: 留给庇护所全景背景换景 (不放 UI, 等级变化一眼可见)
+3. **中央**: 底图 `assets/map/first_scene.png` (恒定世界图) + 庇护所图按等级换景
+   (不放 UI, 等级变化一眼可见; 口径见下方"底图+庇护所图")
 4. **右下**: "进入庇护所" 按钮 (EnterShelterButton) → shelter_interior.tscn
 
 交互规则:
 
-- **背景换景**: `blank_lv%d_1920x1080.png` 按当前庇护所等级取, 缺文件回退 lv1
-  (`_level_bg_texture()`) — 实际 UI 覆盖同名文件即换图
+- **底图+庇护所图** (用户定稿: 进游戏第一屏不放庇护所图): 底图恒定 `assets/map/first_scene.png`
+  (进游戏第一屏世界图, 缺图回退 blank_lv1), main.tscn 节点 MapBackground;
+  庇护所图 `assets/shelter/shelter_level%d.png` 按当前等级取 — 位置/大小不在图里,
+  在 main.tscn 节点 ShelterLayer 上 (**Godot 编辑器拖拽摆位**, 存 tscn 即定稿),
+  缺文件回退 shelter_level1, 仍缺则隐藏 (`_shelter_overlay_texture()`)
+  — 用户后续重新生成庇护所图覆盖同名文件即换图
 - **升级**: 点击 → `start_upgrade()` 成功则按钮禁用显示"升级中..." + 剩余秒数
   (每帧刷新) → 冷却完成信号 → 状态文本"升级完成: LvN 名称", 数值/背景/资源条全部刷新;
   满级或冷却中按钮禁用
@@ -708,6 +713,11 @@ boot.tscn → login.tscn → main.tscn ⇄ shelter_interior.tscn
 - **占位图 (用户定稿)**: 缺图处放 `blank_XX_宽x高.png` 纯色占位 (背景类 1920×1080,
   面板类 512×512), 用户后续**直接覆盖同名文件**填实际 UI, 代码零改动。
   现有: blank_login / blank_lv1~lv3 / blank_interior _1920x1080.png + blank_room_panel_512x512.png
+- **地图图 (用户定稿)**: `assets/map/first_scene.png` = 进游戏第一屏恒定世界底图 (2848×1600);
+  `assets/shelter/shelter_level%d.png` = 庇护所图 (2304×1728, 按等级 1~12 命名),
+  位置/大小不在图里, 在 main.tscn 的 MapBackground / ShelterLayer 两个实体 TextureRect 节点上
+  (Godot 编辑器拖拽摆位, 节点名字固定, 代码只换 texture);
+  缺文件回退 shelter_level1, 仍缺则隐藏 — 用户重新生成覆盖同名文件即换图
 - **按钮例外**: 用真实图 `assets/ui/btn_primary.png` (+_hover/_pressed), 9-slice
   由 ButtonSkin 统一应用, 不放 blank
 - 图标按 `config_id` 拼路径找 `assets/ui/icons/ui_icon_<entity_type>_<name>.svg`,
