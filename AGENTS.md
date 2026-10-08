@@ -1,9 +1,11 @@
 # AGENTS.md — AI 开发代理指导 (Apocalypse Shelter)
 
 > 本文件是 AI 开发代理 (Cline / Claude Code / MiMo + Godot MCP) 的**唯一开发阶段入口**。
-> 开始任何开发任务前: 先读本文件 → 再读规范 → 再看 `configs/` 真实数据。
-> 完整设计规范: `docs/Apocalypse_Shelter_Core_World_Config_Specification_v0.2.md`
-> (以下引用格式: "SPEC PART R" = 该文档的 PART R 章节)
+> 开始任何开发任务前: 先读本文件 → 再读逻辑书 → 再看 `configs/` 真实数据。
+> **游戏逻辑书 (规则 + UI 交互 + 世界/系统/配置设计, 已整合原 SPEC v0.2)**:
+> `docs/game_logic.md` (下称"逻辑书", 引用格式 "逻辑书 A3/B4")
+> 结构: PART A 游戏逻辑 / PART B UI / PART C 系统与依赖 / PART D 配置体系 / PART E 数据与目录 / PART F 验收与路线
+> (旧 "SPEC PART x" 引用的换算见逻辑书头部"旧 SPEC 引用映射"表)
 
 ## 0. 你在做什么项目
 
@@ -31,14 +33,14 @@ CONF 数据文件可以提前存在 (休眠), 但对应 System/UI/玩法代码�
 | Dev-S3 | 敌人与战斗 | enemy, combat | ⬜ |
 | Dev-S4 | NPC 与幸存者 | npc, population, survivor, event | ⬜ |
 | Dev-S5 | 天灾 / 永夜 / 天气 | weather, disaster, world | ⬜ |
-| Dev-S6+ | 深度系统与发行 (探索/交易/科技/剧情/Steam…) | 按 SPEC PART S | ⬜ |
+| Dev-S6+ | 深度系统与发行 (探索/交易/科技/剧情/Steam…) | 按逻辑书 F2 | ⬜ |
 
 每阶段切换 = 改 `system.conf` 开关 + 补该阶段 CONF + 写该阶段 System/UI, 重启生效。
 阶段内验收通过才进入下一阶段 (各阶段出口标准见对应章节)。
 
-> 与 SPEC 的关系: SPEC PART R 的 "3 系统 MVP" 是**架构验收口径** (ConfigManager/依赖校验/
-> 存读档闭环), 在 Dev-S2 完成时达成; SPEC 的 20 项检查与 FREEZE 不变。
-> 本文件的阶段划分以"最快跑起来、内容逐层递进"为准, 优先于 SPEC PART R 的实现顺序。
+> 与逻辑书 F1 的关系: F1 的 "3 系统 MVP" 是**架构验收口径** (ConfigManager/依赖校验/
+> 存读档闭环), 在 Dev-S2 完成时达成; 逻辑书 F3 的 20 项检查与 FREEZE 不变。
+> 本文件的阶段划分以"最快跑起来、内容逐层递进"为准, 优先于逻辑书 F1 的实现顺序。
 
 ## 2. Dev-S1 庇护所 + 升级 (当前阶段, 最高优先级: 先跑起来)
 
@@ -66,16 +68,16 @@ OFF: 其余全部 — 禁止实现、禁止初始化、禁止写 UI
 
 ### 2.4 任务清单 (按顺序, 最小可运行优先)
 
-1. **Godot 工程骨架**: `project.godot` + 目录对齐 SPEC PART Q1 (src/core, src/systems, src/ui, src/scenes)
+1. **Godot 工程骨架**: `project.godot` + 目录对齐逻辑书 E4.1 (src/core, src/systems, src/ui, src/scenes)
 2. **ConfigManager 精简版** (src/core/config_manager.gd)
    - 读 `system.conf` → 校验 `[dependencies]` → 仅加载开启系统对应的 CONF
    - 本期只需: `is_enabled()`, `get_shelter_level(n)`, `get_initial_state()`
-   - 错误处理按 SPEC E9 (配置坏了要报错终止, 不许崩 Godot)
+   - 错误处理按逻辑书 D2.9 (配置坏了要报错终止, 不许崩 Godot)
 3. **ShelterSystem** (src/systems/shelter/shelter_system.gd)
    - 当前等级状态, 升级 = 冷却结束即可升, 校验 `requirements_shelter_level`
    - 每级生效: population_cap / building_slots / storage_bonus / defense / production_bonus_percent (只存数值, 无消费方也无妨)
 4. **SaveSystem**: GameState { shelter_level, 升级冷却计时, 游戏时刻 } 序列化, 3 槽
-5. **TimeManager**: 游戏时钟 (1 游戏时 = 60 现实秒; 1 现实小时 ≈ 2.5 游戏天, 开局 2~3h 现实 = 5~7 游戏天 — 留存节奏见 SPEC PART O1), 升级冷却计时用现实秒
+5. **TimeManager**: 游戏时钟 (1 游戏时 = 60 现实秒; 1 现实小时 ≈ 2.5 游戏天, 开局 2~3h 现实 = 5~7 游戏天 — 留存节奏见逻辑书 A5), 升级冷却计时用现实秒
 6. **最小 UI**: 庇护所面板 (名称/等级/满级进度/升级按钮+冷却显示), 保存/读档按钮
 7. **验收**: §2.5 全部勾掉
 
@@ -88,7 +90,7 @@ OFF: 其余全部 — 禁止实现、禁止初始化、禁止写 UI
 - [ ] 改坏 `shelter_levels.conf` (如删掉 [level.2]) → 启动输出 CONFIG ERROR 并终止, 不静默  ← 待补负向测试
 - [x] `system.conf` 中任一 OFF 系统未被初始化 (零初始化验证)  ← autotest
 
-自动回归入口: `tests/dev_s1_autotest.tscn` (23 项) + `dev_s1_navtest.tscn` (5 项跳转) +
+自动回归入口: `tests/dev_s1_autotest.tscn` (23 项) + `dev_s1_navtest.tscn` (8 项跳转+资源条) +
 `dev_s1_settest.tscn` (11 项设置面板) + `dev_s1_inttest.tscn` (14 项室内导航), headless 运行,
 命令见 `.claude/skills/test/SKILL.md`。
 
@@ -97,7 +99,7 @@ OFF: 其余全部 — 禁止实现、禁止初始化、禁止写 UI
 ### 3.1 玩法目标
 
 外出搜刮获得物资 → 资源入仓 → 建造/升级建筑产出 → 庇护所升级开始消耗资源。
-此时达到 SPEC PART R "3 系统 MVP" 架构验收口径。
+此时达到逻辑书 F1 "3 系统 MVP" 架构验收口径。
 
 ### 3.2 开关
 
@@ -108,7 +110,7 @@ OFF: 其余全部 — 禁止实现、禁止初始化、禁止写 UI
 ### 3.3 任务清单
 
 1. **ResourceSystem**: 资源池/容量/upkeep; 5 资源 (wood/steel/food/water/power)
-2. **搜刮 (简版, 不做完整探索)**: 搜刮按钮面板, 读 loot 节点 CONF (可在 `configs/loot/` 新建 S2 专用节点, 数值参照 SPEC PART J 住宅/超市类), 冷却 + 随机获取资源
+2. **搜刮 (简版, 不做完整探索)**: 搜刮按钮面板, 读 loot 节点 CONF (可在 `configs/loot/` 新建 S2 专用节点, 数值参照逻辑书 A10 住宅/超市类), 冷却 + 随机获取资源
 3. **BuildingSystem**: 6 基础建筑 (generator/warehouse/lumber_yard/water_collector/farm/salvage_workshop), 建造/升级/小时 tick 产消
 4. **shelter_levels 休眠字段激活**: upgrade_cost_* / requirements_buildings / income_* 开始生效; S1 的 30 秒临时冷却废弃
 5. **UI**: 资源面板、建筑面板、搜刮按钮
@@ -116,7 +118,7 @@ OFF: 其余全部 — 禁止实现、禁止初始化、禁止写 UI
 
 ### 3.4 出口标准
 
-- [ ] SPEC R4 验收流程通过 (经济闭环可走通 Lv1→Lv3, 参照 SPEC H4)
+- [ ] 逻辑书 F1.4 验收流程通过 (经济闭环可走通 Lv1→Lv3, 参照逻辑书 A6.5)
 - [ ] 新增假建筑 `buildings/test_hut.conf` + registry 一行 → 游戏内可见可建, 零代码改动 → 删除
 - [ ] 新增搜刮节点 CONF 一行 → 搜刮面板出现, 零代码改动
 
@@ -134,7 +136,7 @@ OFF: 其余全部 — 禁止实现、禁止初始化、禁止写 UI
 
 ### 4.3 任务要点
 
-- enemy/*.conf 按 SPEC PART K3 (先做 enemy.infected_01 一种跑通)
+- enemy/*.conf 按逻辑书 A11 (先做 enemy.infected_01 一种跑通)
 - 搜刮时按概率遭遇战斗 → 结算伤害/战利品 → 掉落走 loot 表
 - 战斗数值全在 CONF, 代码只做结算规则
 - 出口: 打得赢/打不赢都有明确反馈, 掉落入库, 新增敌人 = 加 CONF
@@ -142,27 +144,27 @@ OFF: 其余全部 — 禁止实现、禁止初始化、禁止写 UI
 ## 5. Dev-S4 NPC 与幸存者
 
 开关: `+ npc, population, survivor, event = true`。
-按 SPEC PART I/M: 人口消耗、幸存者招募上岗、NPC 到访、随机事件。
+按逻辑书 A9/A13: 人口消耗、幸存者招募上岗、NPC 到访、随机事件。
 出口: 新增 NPC = 加 `npcs/xxx.conf`; 新增事件 = 加 `events/xxx.conf`, 均零代码改动。
 
 ## 6. Dev-S5 天灾 / 永夜 / 天气
 
 开关: `+ weather, disaster, world = true`。
-按 SPEC PART O: 昼夜/天气对产出的修正、尸潮等灾害 (预警→冲击→结算)、"永夜"等
+按逻辑书 A5/A15: 昼夜/天气对产出的修正、尸潮等灾害 (预警→冲击→结算)、"永夜"等
 特殊世界状态作为 disaster/weather 的极端事件配置。出口: 新增灾害 = 加 CONF。
 
 ## 7. Dev-S6+ 与后续
 
 探索 (map/location/exploration)、交易 (trade/merchant)、制作/科技、剧情 (quest/story)、
-医疗/士气/防御、Steam/成就/音频/设置 — 顺序参考 SPEC PART S, 每组仍按
+医疗/士气/防御、Steam/成就/音频/设置 — 顺序参考逻辑书 F2, 每组仍按
 "开开关 → 补 CONF → 写 System → 回归" 的节奏。
 
 ## 8. 阶段工作流 (每阶段通用)
 
 ```text
 1. 确认当前阶段 (本文件 §1 状态列)
-2. 改 system.conf 开关 (含依赖, 见 SPEC PART C)
-3. 补/改该阶段小 CONF (schema 见 SPEC E7)
+2. 改 system.conf 开关 (含依赖, 见逻辑书 C3)
+3. 补/改该阶段小 CONF (schema 见逻辑书 D2.7)
 4. 实现该阶段 System/UI (只写本阶段玩法)
 5. 跑本阶段出口标准 + 回归前面阶段
 6. 通过 → 更新本文件 §1 状态列, 进入下一阶段
@@ -173,8 +175,9 @@ OFF: 其余全部 — 禁止实现、禁止初始化、禁止写 UI
 ## 9. 给 AI 代理的阅读顺序
 
 1. 本文件 (AGENTS.md) — **阶段与任务以此为准**
-2. `configs/system.conf` — 当前真实开关状态 (应与本文件 §1 一致)
-3. SPEC PART E (CONF 格式) + PART T (加载生命周期) + 当前阶段涉及的 PART
+2. `docs/game_logic.md` (逻辑书) — 游戏规则 + UI 交互 + 世界/系统/配置设计 (写玩法/UI/CONF 前必读;
+   常用入口: PART A 规则 / PART B UI / D2 CONF 格式 / D3 加载生命周期 / F1 验收)
+3. `configs/system.conf` — 当前真实开关状态 (应与本文件 §1 一致)
 4. `configs/` 下相关 .conf — 数值以文件为准, 文档表格仅为设计意图
 
 ## 10. 常见坑
@@ -221,7 +224,7 @@ game/                      ← project.godot 就放这里 (工程根)
 └── assets/                ← res://assets/    (美术/音频, 见 §13)
 ```
 
-### 12.2 启动流 (对齐 SPEC PART T)
+### 12.2 启动流 (对齐逻辑书 D3)
 
 ```text
 project.godot 启动 (run/main_scene = src/scenes/boot.tscn)
@@ -229,20 +232,17 @@ project.godot 启动 (run/main_scene = src/scenes/boot.tscn)
 → boot.tscn: ConfigManager.load_all() 解析+校验依赖
    → 失败: printerr("CONFIG ERROR: ...") + quit(1) 终止, 不静默
 → 按开关初始化 System (挂 /root 常驻, 禁用系统零初始化)
-→ change_scene → login.tscn (菜单垂直居中 5 按钮: 继续游戏 = 直接读最近存档进主界面
-   (SaveManager.find_latest_slot(), 无存档禁用) / 新的游戏 = ShelterSystem.new_game()
-   +TimeManager.new_game() / 读取存档 = SlotPanel 弹层选槽 (SlotButton_1~3+SlotBackButton,
-   空槽禁用) / 设置 (settings 开关门控) / 退出游戏。读档 = set_state 恢复)
-→ change_scene → main.tscn (纯 UI 壳, 读 System 状态渲染)
+→ change_scene → login.tscn → main.tscn (纯 UI 壳, 读 System 状态渲染)
 ```
 
-实现现状: boot.gd / login.gd / main.gd。System 状态跨场景存活 (挂 /root), 场景切换
-用 `get_tree().change_scene_to_file()`, 场景间零耦合。
+实现现状: boot.gd / login.gd / main.gd / shelter_interior.gd。System 状态跨场景存活
+(挂 /root), 场景切换用 `get_tree().change_scene_to_file()`, 场景间零耦合。
+场景布局/按钮/交互规则 (登录菜单 5 按钮、顶部资源条、室内场景等) 一律见**逻辑书 PART B**。
 
 ### 12.3 CONF 读取约定
 
 - Godot `ConfigFile` **只负责** `[节]` + `key = value` 的原始读取
-- 数组 `[a, b]`、范围 `10~30`、`id:level`、类型转换 → **ConfigManager 自己解析** (CONF-D v2, SPEC E3)
+- 数组 `[a, b]`、范围 `10~30`、`id:level`、类型转换 → **ConfigManager 自己解析** (CONF-D v2, 逻辑书 D2.3)
 - 导出设置必做: **Export → Filters to export non-resource files 加 `*.conf`**, 否则打包后读不到配置
 - 改 CONF 一律重启生效 (启动期加载, 运行期只读缓存)
 
@@ -325,17 +325,13 @@ assets/
 - 没拿到正式图前, 全部可用 ui_icon_placeholder.svg + 纯色块顶着跑, 不阻塞开发
 
 **占位图现行约定 (用户定稿, 优先于上表文件名)**: 缺图处放 `blank_XX_宽x高.png` 纯色占位
-(背景类 1920×1080, 如 `blank_login_1920x1080.png` / `blank_lv1~3_1920x1080.png` /
-`blank_interior_1920x1080.png`; 面板类 512×512, 如 `blank_room_panel_512x512.png`), 用户后续
-**直接覆盖同名文件**填实际 UI 资源, 代码零改动。主场景背景按庇护所等级自动换景
-(main.gd `_level_bg_texture()`: `blank_lv%d_1920x1080.png`, 缺文件回退 lv1)。
+(背景类 1920×1080 / 面板类 512×512), 用户后续**直接覆盖同名文件**填实际 UI, 代码零改动。
 **按钮例外**: 用真实图 `assets/ui/btn_primary.png`(+_hover/_pressed), 9-slice 由
 button_skin.gd 处理, 不放 blank。新增图片资源后必须先 `godot --headless --import`。
+具体加载兜底/换景规则见逻辑书 B7。
 
-**庇护所内部场景 (S1 表现层扩展)**: 主界面右下角 "进入庇护所" 按钮 →
-`src/scenes/shelter_interior.tscn` (全代码 UI 壳)。2×3 剖面式房间面板 (上层 卧室/储藏室/
-厨房, 下层 工作台/大门), 房间解锁数 = 当前等级 `building_slots`, 只读展示, 建造/入住等
-房间操作待 S2+ 各系统开启后实现。入口按钮 EnterShelterButton, 返回 BackButton。
+**庇护所内部场景 (S1 表现层扩展)**: `src/scenes/shelter_interior.tscn` (全代码 UI 壳),
+2×3 剖面式房间面板 + 按 `building_slots` 只读解锁。布局与交互见逻辑书 B5。
 
 ### 13.6 音频素材格式/尺寸总规范
 
