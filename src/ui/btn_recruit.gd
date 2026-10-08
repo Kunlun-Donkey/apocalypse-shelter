@@ -25,7 +25,7 @@ const BROWN_TEXT := Color(0.32, 0.22, 0.12)
 const NPC_DATA := [
 	{
 		"id": "npc.veteran_01",
-		"name": "唐文轩",
+		"name": "陈少强",
 		"title": "老兵",
 		"familiarity": 35,
 		"attrs": [["体力", 8], ["生存", 7], ["智慧", 4]],
@@ -38,7 +38,7 @@ const NPC_DATA := [
 	},
 	{
 		"id": "npc.medic_01",
-		"name": "张睿",
+		"name": "凪光",
 		"title": "医师",
 		"familiarity": 35,
 		"attrs": [["体力", 4], ["生存", 6], ["智慧", 9]],
@@ -51,7 +51,7 @@ const NPC_DATA := [
 	},
 	{
 		"id": "npc.engineer_01",
-		"name": "吴齐越",
+		"name": "唐子涵",
 		"title": "工程师",
 		"familiarity": 35,
 		"attrs": [["体力", 5], ["生存", 5], ["智慧", 10]],

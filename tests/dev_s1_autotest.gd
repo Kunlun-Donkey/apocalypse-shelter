@@ -5,8 +5,7 @@ extends Node
 # 覆盖 AGENTS.md §2.5: 配置加载 / Lv1→Lv3 升级链 / 满级禁用 / 存读档一致 /
 # NpcSystem 招募三选一 / 被动查询 / 存读档恢复 / 旧档姓名迁移 / NPC_DATA↔CONF 防漂移 /
 # OFF 系统零初始化 (resource/quest/trade)。CONFIG ERROR 路径由外部脚本改坏配置验证。
-# 断言项数: 49 (原 23 → 49; 新增 26 = NpcSystem 块 21 + 零初始化节点 3 + quest/trade OFF 2;
-# 另改 2 = npc 断言翻转 true / 零初始化计数 1→2; resource OFF 断言移入 npc 后三连组)
+# 断言项数: 69 (含庇护所属性/生命状态 18 + 同伴百分比加成 10 + NpcSystem 21 + 零初始化 5)
 # ============================================================
 
 var _failed := false
@@ -93,9 +92,9 @@ func _run() -> void:
 	_check(npc_sys.recruit("npc.veteran_01"), "recruit(npc.veteran_01) 成功")
 	_check(
 		npc_sys.get_picked_id() == "npc.veteran_01"
-		and npc_sys.get_picked_name() == "唐文轩"
+		and npc_sys.get_picked_name() == "陈少强"
 		and npc_sys.is_recruited("npc.veteran_01"),
-		"招募后 picked = npc.veteran_01 (唐文轩) 且 is_recruited"
+		"招募后 picked = npc.veteran_01 (陈少强) 且 is_recruited"
 	)
 	_check(absf(npc_sys.get_passive_bonus("food_gain_bonus_percent") - 20.0) < 0.001, "被动 food_gain_bonus_percent = 20")
 	_check(not npc_sys.recruit("npc.medic_01"), "三选一锁定: 第二次 recruit 拒绝")
@@ -109,11 +108,11 @@ func _run() -> void:
 	_check(npc_sys.get_picked_id() == "npc.veteran_01", "读档恢复 picked = npc.veteran_01")
 	SaveManager.erase_slot(3)
 
-	# 旧档姓名兼容: {"picked": "张睿"} → npc.medic_01
+	# 旧档旧名兼容 (改名迁移): {"picked": "张睿"} → npc.medic_01 (现名 凪光)
 	npc_sys.set_state({"picked": "张睿"})
 	_check(
-		npc_sys.get_picked_id() == "npc.medic_01" and npc_sys.get_picked_name() == "张睿",
-		"旧档姓名映射 张睿 → npc.medic_01"
+		npc_sys.get_picked_id() == "npc.medic_01" and npc_sys.get_picked_name() == "凪光",
+		"旧档旧名别名 张睿 → npc.medic_01 (现名 凪光)"
 	)
 	npc_sys.new_game()
 
@@ -164,11 +163,11 @@ func _run() -> void:
 		"Lv3 属性 = hp_max 350 / attack 10 / defense 50 / recovery 6"
 	)
 
-	# 攻击/防御 = 基础 + 建筑 (建筑加成本期恒 0, S2/S3 接入)
+	# 攻击/防御 = 基础 + 建筑 + 同伴 (建筑加成本期恒 0, S2/S3 接入)
 	_check(
-		shelter.get_attack() == shelter.get_attack_base() + shelter.get_building_attack_bonus()
+		shelter.get_attack() == shelter.get_attack_base() + shelter.get_building_attack_bonus() + shelter.get_npc_attack_bonus()
 		and shelter.get_building_attack_bonus() == 0 and shelter.get_building_defense_bonus() == 0,
-		"get_attack == base + building_bonus (building 恒 0)"
+		"get_attack == base + building_bonus + npc_bonus (building 恒 0)"
 	)
 
 	# new_game 满血 / get_state 含 current_hp / set_state 往返
@@ -222,6 +221,22 @@ func _run() -> void:
 		shelter.current_level == 2 and shelter.current_hp == 50 + (200 - 100),
 		"升级 delta: 50 + (200-100) = 150"
 	)
+
+	# 同伴百分比加成: 招募 → 庇护所属性 (逻辑书 A9.3; 差额 = 有他/没他, roundi 四舍五入)
+	shelter.set_state({"shelter_level": 1, "upgrading": false, "upgrade_cooldown_remaining": 0.0, "current_hp": 50})
+	_check(npc_sys.recruit("npc.veteran_01"), "招募 陈少强 (加成测试)")
+	_check(absf(npc_sys.get_passive_bonus("shelter_attack_bonus_percent") - 25.0) < 0.001, "被动 shelter_attack_bonus_percent = 25")
+	_check(shelter.get_attack() == 3, "陈少强: 攻击有效 3 = 2 + roundi(2×25%)")
+	_check(shelter.get_hp_max() == 120, "陈少强: hp_max 120 = 100 + 20%")
+	_check(shelter.current_hp == 70, "招募并入 hp delta 20 (50→70)")
+	npc_sys.reset()
+	_check(shelter.get_hp_max() == 100 and shelter.current_hp == 70, "离队: hp_max 回 100, current 不回吐")
+	_check(npc_sys.recruit("npc.medic_01"), "招募 凪光 (加成测试)")
+	_check(shelter.get_recovery() == 3, "凪光: 恢复有效 3 = 2 + roundi(2×25%)")
+	npc_sys.reset()
+	_check(npc_sys.recruit("npc.engineer_01"), "招募 唐子涵 (加成测试)")
+	_check(shelter.get_defense() == 13, "唐子涵: 防御有效 13 = 10 + roundi(10×25%)")
+	npc_sys.new_game()
 	# 复位到 Lv3 满级, 不影响后续零初始化断言 (等级无关, 仅状态干净)
 	shelter.set_state({"shelter_level": 3, "upgrading": false, "upgrade_cooldown_remaining": 0.0})
 	TimeManager.set_process(true)

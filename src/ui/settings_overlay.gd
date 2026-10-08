@@ -227,11 +227,7 @@ func _on_load_pressed() -> void:
 	if data.is_empty():
 		_menu_status.text = "读档失败: 存档损坏或为空"
 		return
-	var shelter := get_node("/root/ShelterSystem") as ShelterSystem
-	shelter.set_state(data.get("shelter", {}))
-	TimeManager.set_state(data.get("time", {}))
-	var quest: Dictionary = data.get("quest", {})
-	TaskPanel.set_accepted(quest.get("accepted", []))
+	# 顺序: 先恢复队伍再恢复庇护所 (current_hp 按加载后同伴加成的有效上限 clamp)
 	var npc_state: Dictionary = data.get("npc", {})
 	if npc_state.is_empty():
 		var legacy: Dictionary = data.get("recruit", {})
@@ -241,6 +237,11 @@ func _on_load_pressed() -> void:
 		npc_sys.set_state(npc_state)
 	else:
 		BtnRecruit.set_picked(str(npc_state.get("picked", "")))
+	var shelter := get_node("/root/ShelterSystem") as ShelterSystem
+	shelter.set_state(data.get("shelter", {}))
+	TimeManager.set_state(data.get("time", {}))
+	var quest: Dictionary = data.get("quest", {})
+	TaskPanel.set_accepted(quest.get("accepted", []))
 	_menu_status.text = "已读取存档 %d" % slot
 
 

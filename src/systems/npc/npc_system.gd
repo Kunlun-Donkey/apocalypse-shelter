@@ -9,9 +9,29 @@ extends Node
 # ============================================================
 
 signal recruited(npc_id: String)
+# 队伍任意变动 (含 set_state/new_game/reset): 消费方 clamp 状态用, 不补差额
+signal team_changed()
+
+# 旧档姓名 → config_id 别名 (改名迁移兼容; find_npc_id_by_name 只认 CONF 现名)
+const LEGACY_NAMES := {
+	"唐文轩": "npc.veteran_01",
+	"张睿": "npc.medic_01",
+	"吴齐越": "npc.engineer_01",
+}
 
 # 队伍成员 config_id 列表; 本期招募规则锁定 ≤1 人 (recruit 拒绝第二个)
 var _team: Array[String] = []
+
+
+func _ready() -> void:
+	# 接线 ShelterSystem (boot/测试均先建 ShelterSystem 后建本系统):
+	# recruited → 招募差额并入 hp; team_changed → clamp
+	var shelter := get_tree().root.get_node_or_null("ShelterSystem") as ShelterSystem
+	if shelter != null:
+		if not recruited.is_connected(shelter.on_companion_recruited):
+			recruited.connect(shelter.on_companion_recruited)
+		if not team_changed.is_connected(shelter.on_companion_team_changed):
+			team_changed.connect(shelter.on_companion_team_changed)
 
 
 # ---------------- 招募 ----------------
@@ -30,6 +50,7 @@ func recruit(npc_id: String) -> bool:
 		return false
 	_team.append(npc_id)
 	recruited.emit(npc_id)
+	team_changed.emit()
 	return true
 
 
@@ -115,14 +136,17 @@ func set_state(data: Dictionary) -> void:
 	# 本期招募规则 ≤1 人, 只保留第一个
 	if _team.size() > 1:
 		_team.resize(1)
+	team_changed.emit()
 
 
 func new_game() -> void:
 	_team.clear()
+	team_changed.emit()
 
 
 func reset() -> void:
 	_team.clear()
+	team_changed.emit()
 
 
 func _append_member(value: String) -> void:
@@ -132,7 +156,7 @@ func _append_member(value: String) -> void:
 	_team.append(normalized)
 
 
-# npc.* 前缀 = config_id 直接用; 否则按旧档姓名映射 (迁移兼容)。失败置空 warning 不报错
+# npc.* 前缀 = config_id 直接用; 否则按姓名映射 (现名 find_npc_id_by_name, 旧名 LEGACY_NAMES)。失败置空 warning 不报错
 func _normalize_id(value: String) -> String:
 	if value.is_empty():
 		return ""
@@ -142,6 +166,8 @@ func _normalize_id(value: String) -> String:
 		push_warning("NpcSystem.set_state: unknown npc id 已忽略: %s" % value)
 		return ""
 	var mapped := ConfigManager.find_npc_id_by_name(value)
+	if mapped.is_empty() and LEGACY_NAMES.has(value):
+		mapped = str(LEGACY_NAMES[value])
 	if mapped.is_empty():
 		push_warning("NpcSystem.set_state: 旧档姓名无法映射 npc id, 已忽略: %s" % value)
 	return mapped

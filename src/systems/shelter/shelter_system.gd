@@ -83,8 +83,13 @@ func get_level_stats() -> Dictionary:
 	return _level_stats
 
 
-func get_hp_max() -> int:
+# hp_max 有效值 = 等级基础 + 同伴百分比加成 (get_hp_max_base 不含加成)
+func get_hp_max_base() -> int:
 	return int(_level_stats.get("hp_max", 0))
+
+
+func get_hp_max() -> int:
+	return get_hp_max_base() + _percent_bonus(get_hp_max_base(), _npc_percent("shelter_hp_bonus_percent"))
 
 
 func get_attack_base() -> int:
@@ -96,8 +101,12 @@ func get_building_attack_bonus() -> int:
 	return 0
 
 
+func get_npc_attack_bonus() -> int:
+	return _percent_bonus(get_attack_base(), _npc_percent("shelter_attack_bonus_percent"))
+
+
 func get_attack() -> int:
-	return get_attack_base() + get_building_attack_bonus()
+	return get_attack_base() + get_building_attack_bonus() + get_npc_attack_bonus()
 
 
 func get_defense_base() -> int:
@@ -109,12 +118,70 @@ func get_building_defense_bonus() -> int:
 	return 0
 
 
+func get_npc_defense_bonus() -> int:
+	return _percent_bonus(get_defense_base(), _npc_percent("shelter_defense_bonus_percent"))
+
+
 func get_defense() -> int:
-	return get_defense_base() + get_building_defense_bonus()
+	return get_defense_base() + get_building_defense_bonus() + get_npc_defense_bonus()
 
 
-func get_recovery() -> int:
+func get_recovery_base() -> int:
 	return int(_level_stats.get("recovery", 0))
+
+
+func get_npc_recovery_bonus() -> int:
+	return _percent_bonus(get_recovery_base(), _npc_percent("shelter_recovery_bonus_percent"))
+
+
+# 有效恢复 (每游戏时回血量) = 基础 + 同伴加成
+func get_recovery() -> int:
+	return get_recovery_base() + get_npc_recovery_bonus()
+
+
+# ---------------- 同伴加成 (招募 → 庇护所属性, 百分比口径) ----------------
+
+func _npc_sys() -> NpcSystem:
+	return get_tree().root.get_node_or_null("NpcSystem") as NpcSystem
+
+
+# 全队 shelter_*_bonus_percent 求和 (NpcSystem 不在 = 0, 零初始化不破坏)
+func _npc_percent(field: String) -> float:
+	var sys := _npc_sys()
+	if sys == null:
+		return 0.0
+	return sys.get_passive_bonus(field)
+
+
+# 加成值 = 等级基础值 × 百分比 / 100 (四舍五入)
+func _percent_bonus(base: int, percent: float) -> int:
+	return roundi(base * percent / 100.0)
+
+
+# 招募回调 (NpcSystem.recruited 接线): 新增容量满血并入 (与升级 A4 同规则, 已损保留)
+# 差额无状态计算 = 有他/没他 的有效 hp_max 之差 (不受读档顺序影响)
+func on_companion_recruited(npc_id: String) -> void:
+	var data: Dictionary = ConfigManager.get_npc(npc_id)
+	var bonuses: Dictionary = data.get("passive", {}).get("bonuses", {})
+	var p: float = float(bonuses.get("shelter_hp_bonus_percent", 0.0))
+	if p <= 0.0:
+		return
+	var total: float = _npc_percent("shelter_hp_bonus_percent")
+	var base: int = get_hp_max_base()
+	var old_max: int = base + _percent_bonus(base, total - p)
+	var new_max: int = base + _percent_bonus(base, total)
+	var delta: int = new_max - old_max
+	if delta > 0:
+		current_hp = mini(current_hp + delta, new_max)
+		hp_changed.emit(current_hp, new_max)
+
+
+# 队伍变动回调 (NpcSystem.team_changed 接线: 读档/新游戏/reset): 只 clamp 不补差额
+func on_companion_team_changed() -> void:
+	var mx: int = get_hp_max()
+	if current_hp > mx:
+		current_hp = mx
+		hp_changed.emit(current_hp, mx)
 
 
 func apply_damage(amount: int) -> void:

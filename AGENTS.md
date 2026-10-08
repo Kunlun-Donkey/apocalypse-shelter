@@ -31,7 +31,7 @@ CONF 数据文件可以提前存在 (休眠), 但对应 System/UI/玩法代码�
 | Dev-S1 | 庇护所 + 升级 (无资源) + 招募三选一 | shelter, settings, npc | 🟡 代码+自动测试完成, 待 F5 人工验收 |
 | Dev-S2 | 野外物资 + 资源 + 基础建筑 | resource, building, loot | ⬜ |
 | Dev-S3 | 敌人与战斗 | enemy, combat | ⬜ |
-| Dev-S4 | NPC 与幸存者 (**npc 已提前开启**: 招募三选一/入队/被动查询; 到访/交易/对话未做) | npc, population, survivor, event | ⬜ |
+| Dev-S4 | NPC 与幸存者 (**npc 已提前开启**: 招募三选一/入队/被动查询/招募加庇护所属性 (百分比入 CONF); 到访/交易/对话未做) | npc, population, survivor, event | ⬜ |
 | Dev-S5 | 天灾 / 永夜 / 天气 | weather, disaster, world | ⬜ |
 | Dev-S6+ | 深度系统与发行 (探索/交易/科技/剧情/Steam…) | 按逻辑书 F2 | ⬜ |
 
@@ -60,7 +60,8 @@ OFF: 其余全部 — 禁止实现、禁止初始化、禁止写 UI
 > settings = 设置面板 (全屏开关 + 主音量, src/ui/settings_overlay.gd), 属于 CORE-ui 的延伸;
 > 入口在登录/主界面, 修改即生效即存 `user://settings.json`; 主界面入口带"游戏菜单"段
 > (存/读档 3 槽 + 返回标题), 登录入口不带 (逻辑书 B6)。
-> npc = **提前开启** (Dev-S4 招募部分): 三选一入队 + 被动技能查询 (src/systems/npc/npc_system.gd,
+> npc = **提前开启** (Dev-S4 招募部分): 三选一入队 + 被动技能查询 + **招募加庇护所属性
+> (百分比入 CONF `npcs/*.conf [passive]` shelter_*_bonus_percent)** (src/systems/npc/npc_system.gd,
 > 逻辑书 A9.3); 到访 NPC/交易/对话仍属 Dev-S4 后续, 未做。
 
 ### 2.3 范围裁剪 (关键)
@@ -148,7 +149,8 @@ OFF: 其余全部 — 禁止实现、禁止初始化、禁止写 UI
 ## 5. Dev-S4 NPC 与幸存者
 
 开关: `+ npc, population, survivor, event = true`
-(**npc 已提前开启**: 招募三选一/入队/被动查询已实装, 见逻辑书 A9.3; 到访/交易/对话未做)。
+(**npc 已提前开启**: 招募三选一/入队/被动查询 + 招募加庇护所属性 (百分比入 CONF) 已实装,
+见逻辑书 A9.3; 到访/交易/对话未做)。
 按逻辑书 A9/A13: 人口消耗、幸存者招募上岗、NPC 到访、随机事件。
 出口: 新增 NPC = 加 `npcs/xxx.conf`; 新增事件 = 加 `events/xxx.conf`, 均零代码改动。
 

@@ -144,9 +144,9 @@ func _run() -> void:
 	var s_hp_val := _find_by_name(scene, "StatusHpValue") as Label
 	_check(s_hp_val != null and s_hp_val.text == "100/100", "StatusHpValue = 100/100")
 	var s_atk := _find_by_name(scene, "StatusAttackValue") as Label
-	_check(s_atk != null and s_atk.text == "基础 2 + 建筑 0", "StatusAttackValue = 基础 2 + 建筑 0")
+	_check(s_atk != null and s_atk.text == "基础 2 + 加成 0", "StatusAttackValue = 基础 2 + 加成 0")
 	var s_def := _find_by_name(scene, "StatusDefenseValue") as Label
-	_check(s_def != null and s_def.text == "基础 10 + 建筑 0", "StatusDefenseValue = 基础 10 + 建筑 0")
+	_check(s_def != null and s_def.text == "基础 10 + 加成 0", "StatusDefenseValue = 基础 10 + 加成 0")
 	var s_rec := _find_by_name(scene, "StatusRecoveryValue") as Label
 	_check(s_rec != null and s_rec.text == "2 / 游戏时", "StatusRecoveryValue = 2 / 游戏时")
 

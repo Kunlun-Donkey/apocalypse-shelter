@@ -3,7 +3,7 @@ extends Control
 # ============================================================
 # 庇护所状态面板 (非模态下拉): 房子按钮点击向下展开
 # 显示 生命(HP条 当前/上限) / 攻击 / 防御 / 恢复 (逻辑书 B4.3)
-# 数据源 = ShelterSystem (建筑加成本期恒 0, S2/S3 接聚合)
+# 数据源 = ShelterSystem; 加成 = 建筑加成(恒 0, S2/S3 接聚合) + 同伴加成(招募百分比)
 # 关闭: 点面板外 (DismissCatcher) / 再点房子按钮 / Esc
 # 节点名 Status* 前缀 (测试契约, 防与其他面板撞名)
 # ============================================================
@@ -81,10 +81,12 @@ func refresh() -> void:
 	_hp_bar.value = hp
 	_hp_value.text = "%d/%d" % [hp, hp_max]
 	_title_label.text = "%s · Lv%d" % [str(_shelter.get_level_name()), int(_shelter.current_level)]
-	_attack_value.text = "基础 %d + 建筑 %d" % [
-		int(_shelter.get_attack_base()), int(_shelter.get_building_attack_bonus())]
-	_defense_value.text = "基础 %d + 建筑 %d" % [
-		int(_shelter.get_defense_base()), int(_shelter.get_building_defense_bonus())]
+	_attack_value.text = "基础 %d + 加成 %d" % [
+		int(_shelter.get_attack_base()),
+		int(_shelter.get_building_attack_bonus()) + int(_shelter.get_npc_attack_bonus())]
+	_defense_value.text = "基础 %d + 加成 %d" % [
+		int(_shelter.get_defense_base()),
+		int(_shelter.get_building_defense_bonus()) + int(_shelter.get_npc_defense_bonus())]
 	_recovery_value.text = "%d / 游戏时" % int(_shelter.get_recovery())
 
 

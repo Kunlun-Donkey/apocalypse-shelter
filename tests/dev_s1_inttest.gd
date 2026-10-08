@@ -4,7 +4,7 @@ extends Node
 #   godot --headless --path . res://tests/dev_s1_inttest.tscn
 # 覆盖: 登录"开始新游戏" → Main (顶部资源条/等级 + 底部 6 功能按钮)
 #       → 3 占位按钮提示 "后续版本开放: X"
-#       → 招募面板 (Btn_Recruit 木板卡片: 唐文轩/张睿/吴齐越, 每卡招募按钮+成功弹窗 + 一次性选人锁定)
+#       → 招募面板 (Btn_Recruit 木板卡片: 陈少强/凪光/唐子涵, 每卡招募按钮+成功弹窗 + 一次性选人锁定)
 #         已选状态归 NpcSystem (config_id), BtnRecruit 为姓名门面 (is_picked/get_picked_id/被动查询)
 #       → 任务卷轴面板 (列表 任务1~10/详情/接受/放弃)
 #       → "进入" → ShelterInterior (一房一床 RoomPanel_1/BedLabel + 升级区)
@@ -150,7 +150,7 @@ func _run() -> void:
 	_check(_find_by_name(recruit_panel, "RecruitBox") != null, "面板含 RecruitBox (1400×760 弹窗)")
 	_check(_find_by_name(recruit_panel, "Mask") != null, "面板含全屏遮罩 Mask")
 	var cards_ok := true
-	var expect_names := ["唐文轩", "张睿", "吴齐越"]
+	var expect_names := ["陈少强", "凪光", "唐子涵"]
 	var expect_titles := ["老兵", "医师", "工程师"]
 	for i in range(3):
 		var card := _find_by_name(recruit_panel, "NpcCard_%d" % (i + 1))
@@ -159,15 +159,15 @@ func _run() -> void:
 		if card == null or name_label == null or name_label.text != expect_names[i] \
 				or title_label == null or title_label.text != expect_titles[i]:
 			cards_ok = false
-	_check(cards_ok, "3 张 NpcCard 姓名/职业 = 唐文轩老兵/张睿医师/吴齐越工程师")
+	_check(cards_ok, "3 张 NpcCard 姓名/职业 = 陈少强老兵/凪光医师/唐子涵工程师")
 
 	# 属性条: TextureProgressBar max=10, 值按 NPC_DATA 字典
 	var bar := _find_by_name(recruit_panel, "AttrBar_1_1") as TextureProgressBar
-	_check(bar != null and bar.max_value == 10.0 and bar.value == 8.0, "唐文轩 AttrBar_1_1 体力 8/10")
+	_check(bar != null and bar.max_value == 10.0 and bar.value == 8.0, "陈少强 AttrBar_1_1 体力 8/10")
 	bar = _find_by_name(recruit_panel, "AttrBar_2_3") as TextureProgressBar
-	_check(bar != null and bar.max_value == 10.0 and bar.value == 9.0, "张睿 AttrBar_2_3 智慧 9/10")
+	_check(bar != null and bar.max_value == 10.0 and bar.value == 9.0, "凪光 AttrBar_2_3 智慧 9/10")
 	bar = _find_by_name(recruit_panel, "AttrBar_3_3") as TextureProgressBar
-	_check(bar != null and bar.value == 10.0, "吴齐越 AttrBar_3_3 智慧 10/10")
+	_check(bar != null and bar.value == 10.0, "唐子涵 AttrBar_3_3 智慧 10/10")
 	var fam := _find_by_name(recruit_panel, "Familiarity_1") as Label
 	_check(fam != null and fam.text == "熟悉度: 35", "Familiarity_1 = 熟悉度: 35")
 	var passive := _find_by_name(recruit_panel, "PassiveTitle_1") as Label
@@ -175,10 +175,10 @@ func _run() -> void:
 	var active := _find_by_name(recruit_panel, "ActiveTitle_3") as Label
 	_check(active != null and active.text == "【机械守卫】", "ActiveTitle_3 = 【机械守卫】")
 	var desc2 := _find_by_name(recruit_panel, "Desc_2") as Label
-	_check(desc2 != null and desc2.text.contains("外科医师"), "Desc_2 含张睿背景文案")
+	_check(desc2 != null and desc2.text.contains("外科医师"), "Desc_2 含凪光背景文案")
 	_check(_find_by_name(recruit_panel, "Diamond_1") != null and _find_by_name(recruit_panel, "Diamond_3") != null, "每卡顶部有钻石 Diamond_N")
 
-	# 每卡招募按钮+成功弹窗 (3 选 1 一次性锁定): 点 RecruitButton_2 招募 张睿
+	# 每卡招募按钮+成功弹窗 (3 选 1 一次性锁定): 点 RecruitButton_2 招募 凪光
 	var click := InputEventMouseButton.new()
 	click.pressed = true
 	click.button_index = MOUSE_BUTTON_LEFT
@@ -196,19 +196,19 @@ func _run() -> void:
 	# 整卡点击不再触发招募
 	card2.gui_input.emit(click)
 	await get_tree().process_frame
-	_check(not BtnRecruit.is_picked("张睿"), "整卡点击不触发招募 (NpcCard_2 gui_input 不入队)")
+	_check(not BtnRecruit.is_picked("凪光"), "整卡点击不触发招募 (NpcCard_2 gui_input 不入队)")
 	# 点招募按钮 → 入队 + 面板关闭 + 成功弹窗
 	btn2.pressed.emit()
 	await _settle()
 	_check(not recruit_panel.visible, "点招募按钮后面板关闭")
-	_check(BtnRecruit.is_picked("张睿") and BtnRecruit.get_picked_id() == "npc.medic_01", "BtnRecruit 入队 张睿 (get_picked_id = npc.medic_01)")
+	_check(BtnRecruit.is_picked("凪光") and BtnRecruit.get_picked_id() == "npc.medic_01", "BtnRecruit 入队 凪光 (get_picked_id = npc.medic_01)")
 	var npc_root := get_tree().root.get_node_or_null("NpcSystem") as NpcSystem
 	_check(npc_root != null and absf(npc_root.get_passive_bonus("casualty_reduce_percent") - 30.0) < 0.001, "NpcSystem 被动 casualty_reduce_percent = 30")
 	# 成功弹窗 (挂在场景根)
 	var success_panel := _find_by_name(main_scene, "RecruitSuccessPanel") as Control
 	var success_label := _find_by_name(main_scene, "RecruitSuccessLabel") as Label
 	_check(success_panel != null and success_label != null \
-			and success_label.text == "成功招募 张睿！可在庇护所内查看详细信息", "成功弹窗 RecruitSuccessPanel 文案 = 成功招募 张睿！可在庇护所内查看详细信息")
+			and success_label.text == "成功招募 凪光！可在庇护所内查看详细信息", "成功弹窗 RecruitSuccessPanel 文案 = 成功招募 凪光！可在庇护所内查看详细信息")
 	var success_ok := _find_by_name(main_scene, "RecruitSuccessOkButton") as Button
 	if success_panel == null or success_ok == null:
 		_abort()
@@ -302,13 +302,13 @@ func _run() -> void:
 	var bed := _find_by_name(interior, "BedLabel") as Label
 	_check(bed != null and bed.text == "床 ×1", "室内 BedLabel = 床 ×1")
 
-	# 室内: 卧室同伴名牌 CompanionSlot + NpcDetailPanel 详情 (已招募 张睿)
+	# 室内: 卧室同伴名牌 CompanionSlot + NpcDetailPanel 详情 (已招募 凪光)
 	var slot := _find_by_name(interior, "CompanionSlot") as Button
 	_check(slot != null, "室内存在 CompanionSlot (同伴名牌)")
 	if slot == null:
 		_abort()
 		return
-	_check(slot.text == "同伴: 张睿 · 医师", "CompanionSlot 文案 = 同伴: 张睿 · 医师")
+	_check(slot.text == "同伴: 凪光 · 医师", "CompanionSlot 文案 = 同伴: 凪光 · 医师")
 	_check(not slot.disabled, "已招募 CompanionSlot 可点 (disabled=false)")
 	slot.pressed.emit()
 	await get_tree().process_frame
@@ -318,7 +318,7 @@ func _run() -> void:
 		_abort()
 		return
 	var d_name := _find_by_name(interior, "DetailName") as Label
-	_check(d_name != null and d_name.text == "张睿", "DetailName = 张睿")
+	_check(d_name != null and d_name.text == "凪光", "DetailName = 凪光")
 	var d_title := _find_by_name(interior, "DetailTitle") as Label
 	_check(d_title != null and d_title.text == "医师", "DetailTitle = 医师")
 	var d_fam := _find_by_name(interior, "DetailFamiliarity") as Label
@@ -438,7 +438,7 @@ func _run() -> void:
 	menu_status = _find_by_name(overlay, "MenuStatusLabel") as Label
 	_check(menu_status != null and menu_status.text.begins_with("已读取"), "读取进度成功")
 	_check(TaskPanel.is_accepted("quest.placeholder_01"), "读档恢复 已接受 任务状态")
-	_check(BtnRecruit.is_picked("张睿"), "读档恢复 已招募 同伴状态 (张睿)")
+	_check(BtnRecruit.is_picked("凪光"), "读档恢复 已招募 同伴状态 (凪光)")
 	# 存档快照双字段: npc.picked = config_id (主) + recruit.picked = 姓名镜像 (旧字段)
 	var save_data: Dictionary = SaveManager.load_game(3)
 	var npc_part: Dictionary = save_data.get("npc", {})

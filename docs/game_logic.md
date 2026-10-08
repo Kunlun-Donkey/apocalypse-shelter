@@ -129,6 +129,8 @@ V1 主线 Lv12+结局 ≈ 35~45h, 全成就 60h+; Lv3 须 ~100 分钟现实可�
   `hp_max / attack / recovery` +
   `income_* / unlocks_buildings / unlocks_systems / unlocks_locations` +
   `upgrade_cost_* / requirements_buildings / requirements_shelter_level`
+- `hp_max / attack / recovery / defense` 为**基础值**; **有效值 = 基础 + 建筑加成(本期恒 0) +
+  同伴加成** (招募同伴庇护所属性百分比, 见 A9.3; 状态面板显示口径见 B4.3)
 - 当前 MVP 上限 `mvp_max_level = 3` (shelter.conf), 满级后升级按钮禁用, 等待后续版本开放
 - 视觉五段演变 (同一构图越修越强): cabin(1-2) → camp(3-4) → outpost(5-6) → fortress(7-8) → stronghold(9-12)
 
@@ -164,8 +166,11 @@ Lv4~Lv12 在后续阶段以**追加 `[level.4]`~`[level.12]` 节**的方式加�
   校验 `requirements_buildings` (id:level 列表), 冷却改由 CONF 驱动
 - 状态机: `can_upgrade()` 判定 → `start_upgrade()` 进入升级中 → 冷却结束 `upgrade_completed`
   信号 → 等级+1, 数值按新级生效 (名称/数值全部随 CONF 变化)
-- **HP 并入**: 升级完成时 `current_hp += (新 hp_max − 旧 hp_max)` — 新增结构满血并入、
-  已损保留, **不自动加满**
+- **HP 并入**: 升级完成时 `current_hp += (新有效 hp_max − 旧有效 hp_max)` — 新增结构满血并入、
+  已损保留, **不自动加满** (有效 hp_max 含同伴加成, 见 A9.3)
+- **招募同伴同 HP 并入规则**: 招募瞬间 `current_hp += (新有效 hp_max − 旧有效 hp_max)`
+  (同样新增容量满血并入、已损保留), `NpcSystem.recruited` 信号 → ShelterSystem 结算;
+  队伍变动 (读档/新游戏 reset) 只 clamp `current_hp` 到有效 hp_max, **不补差额** (见 A8/A9.3)
 
 ### A5. 时间系统 (原 SPEC O1)
 
@@ -335,6 +340,9 @@ fuel/medicine/electronics/rare_alloy 的 CONF 文件可在第 2 阶段加入 reg
 - 存档路径: Windows `%APPDATA%/Godot/app_userdata/<项目>/`, Linux `~/.local/share/godot/app_userdata/<项目>/`
 - **设置与存档分离**: 设置存 `user://settings.json`, 不进游戏存档
 - 读档 = `set_state()` 恢复各 System 后进主界面; 存档版本不符 = 视为损坏, 拒绝加载
+- **读档 set_state 顺序: 先 `NpcSystem.set_state` 后 `ShelterSystem.set_state`**
+  (保证 shelter 的 current_hp clamp 用**加载后队伍**算有效 hp_max; 队伍变动
+  只 clamp `current_hp` 到有效 hp_max, **不补差额**, 同新游戏 reset; 见 A4/A9.3)
 
 #### A8.1 GameState 与 CONF 的边界 (原 SPEC P3)
 
@@ -389,7 +397,7 @@ npcs/merchant_01.conf
 ```
 
 新增 NPC = 新增 `npcs/xxx.conf` + registry 登记。
-(注意 id 错开: `npc.engineer_01` 已被开局同伴吴齐越占用, 到访机械师用 `npc.mechanic_01`)
+(注意 id 错开: `npc.engineer_01` 已被开局同伴唐子涵占用, 到访机械师用 `npc.mechanic_01`)
 
 > 注: npc 系统已**提前开启招募部分** (三选一入队/被动查询, 见 A9.3);
 > 本节的到访 NPC / 交易 / 对话等功能仍属 Dev-S4 未做。
@@ -402,14 +410,35 @@ npcs/merchant_01.conf
 
 | NPC ID | 姓名 | npc_type | 属性 (体力/生存/智慧) | 被动 | 主动 |
 |---|---|---|---|---|---|
-| `npc.veteran_01` | 唐文轩 (老兵) | `veteran` | 8 / 7 / 4 | 【觅食专长】提升全队获取食物的速度 | 【紧急搜刮】一次性获得一定数量食物 |
-| `npc.medic_01` | 张睿 (医师) | `medic` | 4 / 6 / 9 | 【应急救护】减少外出任务里幸存者的伤亡概率 | 【集中救治】一次性治疗一定数量受伤幸存者 |
-| `npc.engineer_01` | 吴齐越 (工程师) | `engineer` | 5 / 5 / 10 | 【城防强化】提升据点城防的攻击威力 | 【机械守卫】召唤一台具备攻击力的机器人协助战斗 |
+| `npc.veteran_01` | 陈少强 (老兵) | `veteran` | 8 / 7 / 4 | 【觅食专长】提升全队获取食物的速度 | 【紧急搜刮】一次性获得一定数量食物 |
+| `npc.medic_01` | 凪光 (医师) | `medic` | 4 / 6 / 9 | 【应急救护】减少外出任务里幸存者的伤亡概率 | 【集中救治】一次性治疗一定数量受伤幸存者 |
+| `npc.engineer_01` | 唐子涵 (工程师) | `engineer` | 5 / 5 / 10 | 【城防强化】提升据点城防的攻击威力 | 【机械守卫】召唤一台具备攻击力的机器人协助战斗 |
 
 - 三人熟悉度均 35; 属性值上限 10 (展示为属性条 `TextureProgressBar` max=10, 见 B4.2)
 - 数据源分工: CONF `npcs/*.conf` = **系统数据源** (NpcSystem 读); `src/ui/btn_recruit.gd`
   的 `NPC_DATA` 字典 = **UI 展示源** (含 `id` 字段), autotest 有两者一致性断言防漂移
 - (旧"铁牛/老葛/苏晚/陈姨"四选一设定已作废, 被本表覆盖)
+
+**招募 → 庇护所属性加成** (2026-10 新增, 数值进 CONF `[passive]` 新键, **百分比口径**;
+每名同伴 = 专精主属性一项 + 全员 `hp_max` 一项):
+
+| NPC | [passive] 新键 |
+|---|---|
+| 陈少强 | `shelter_attack_bonus_percent = 25` + `shelter_hp_bonus_percent = 20` |
+| 凪光 | `shelter_recovery_bonus_percent = 25` + `shelter_hp_bonus_percent = 20` |
+| 唐子涵 | `shelter_defense_bonus_percent = 25` + `shelter_hp_bonus_percent = 20` |
+
+- **计算**: 加成值 = `roundi(等级基础值 × 百分比 / 100)`; **有效值 = 基础 + 建筑加成(恒 0) +
+  同伴加成** — hp_max 有效 = base + `roundi(base × hp% / 100)`, 攻击/防御/恢复同理;
+  恢复的**有效值**用于每游戏小时回血 (见 B4.3)
+- **招募瞬间 HP 并入** (与 A4 升级 HP 并入同规则): `current_hp += (新有效 hp_max − 旧有效 hp_max)`
+  — 新增容量满血并入、已损保留; `NpcSystem` 信号 `recruited` → `ShelterSystem` 结算
+- **队伍变动** (读档/新游戏 reset) **只 clamp** `current_hp` 到有效 hp_max, **不补差额**;
+  存档读取顺序固定 **先 `NpcSystem.set_state` 后 `ShelterSystem.set_state`** (clamp 用
+  加载后的队伍算上限, 见 A8)
+- **消费链**: ShelterSystem 经 `NpcSystem.get_passive_bonus("shelter_*_bonus_percent")`
+  全队求和; **NpcSystem 不存在时加成 = 0** (零初始化不破坏); 旧被动键
+  (`food_gain_bonus_percent` 等) 保留不变
 
 实施现状 (**已开启**, 招募部分提前实施 — 原 Dev-S4 内容; 2026-10):
 
@@ -420,10 +449,12 @@ npcs/merchant_01.conf
   **一次性锁定** (已选不可换), 系统层 + UI 层双重锁定; 本期 `team` 至多 1 人, 已有人再招直接拒绝
 - **被动技能数值查询 API**: `NpcSystem.get_passive_bonus(field)` 返回全队
   `passive.bonuses` 求和 (如 `food_gain_bonus_percent=20` / `casualty_reduce_percent=30`),
-  供 S2+ 各系统消费; `get_active_skill_data(id)` **主动技能数据只读**, 本期不结算
+  供各系统消费 (`shelter_*_bonus_percent` 已由 ShelterSystem 消费, 见上; 其余 S2+);
+  `get_active_skill_data(id)` **主动技能数据只读**, 本期不结算
 - 存档字段: 主字段 `npc: {picked: id, team: [id]}` + 镜像 `recruit: {picked: 姓名}`
   (旧档兼容, 保留一个版本); 读档优先 `npc`, 空则回退 `recruit.picked` (姓名经
-  `set_state` 自动映射回 id)
+  `set_state` 自动映射回 id; **旧档姓名别名**: 旧名 唐文轩/张睿/吴齐越 经
+  `LEGACY_NAMES` 别名表映射回 config_id, 仅旧档迁移语境保留)
 - **未做 (仍属 Dev-S4)**: 到访 NPC / 交易 / 对话 / 人口接管 / 主动技能结算
 
 ### A10. 野外资源 (搜刮节点) (原 SPEC J)
@@ -697,7 +728,8 @@ boot.tscn → login.tscn → main.tscn ⇄ shelter_interior.tscn
 | 退出游戏 | `get_tree().quit()` |
 
 - 读档流程: `SaveManager.load_game(slot)` → 空/损坏提示不切换; 成功则
-  `shelter.set_state()` + `TimeManager.set_state()` → 主界面
+  **先 `NpcSystem.set_state()` 后 `shelter.set_state()`** + `TimeManager.set_state()`
+  → 主界面 (顺序原因见 A8)
 
 ### B4. main.tscn (游戏主界面 = 世界界面)
 
@@ -783,7 +815,7 @@ boot.tscn → login.tscn → main.tscn ⇄ shelter_interior.tscn
   (BROWN_DARK #4A2F14 / BROWN_TEXT) 适配木板废土风
 - **NPC 数据**: `btn_recruit.gd` 的 `NPC_DATA` 字典 = UI 展示源 (姓名/职业/熟悉度/属性/
   背景/被动/主动/钻石路径 + `id`), 改文案/换钻石只动字典; **CONF `npcs/*.conf` = 系统数据源**
-  (NpcSystem 读), autotest 有两者一致性断言防漂移; 三人数据见 A9.3
+  (NpcSystem 读), autotest 有两者一致性断言防漂移; 三人 (陈少强/凪光/唐子涵) 数据见 A9.3
 - **招募按钮三选一 (用户定稿 2026-10 改版, 旧"整卡点选"废除)**: 每张卡片底部一个
   **招募按钮** `RecruitButton_N`, 点击入队该 NPC (三选一, 一次性锁定); **整卡点击无效**。
   点击走 `NpcSystem.recruit(id)` (存 config_id, **一次性锁定**不可换, 本期 team≤1),
@@ -808,25 +840,29 @@ boot.tscn → login.tscn → main.tscn ⇄ shelter_interior.tscn
 - **节点契约** (测试用): `HouseButton` / `ShelterStatusPanel` / `DismissCatcher` (面板外点击捕获) /
   `StatusBox` / `StatusTitle` (="小木屋 · Lv1") /
   `StatusHpRow` / `StatusHpLabel` / `StatusHpBar` / `StatusHpValue` (="100/100") /
-  `StatusAttackRow` / `StatusAttackLabel` / `StatusAttackValue` (="基础 2 + 建筑 0") /
-  `StatusDefenseRow` / `StatusDefenseLabel` / `StatusDefenseValue` (="基础 10 + 建筑 0") /
+  `StatusAttackRow` / `StatusAttackLabel` / `StatusAttackValue` (="基础 2 + 加成 0") /
+  `StatusDefenseRow` / `StatusDefenseLabel` / `StatusDefenseValue` (="基础 10 + 加成 0") /
   `StatusRecoveryRow` / `StatusRecoveryLabel` / `StatusRecoveryValue` (="2 / 游戏时")
 - **四行显示** (数据全来自 ShelterSystem):
-  1. **生命**: HP 条 (`ProgressBar`, StyleBoxFlat 代码绘制) + "当前/上限" — 可扣可回
-  2. **攻击**: "基础 X + 建筑 Y" (建筑加成本期恒 0)
-  3. **防御**: "基础 X + 建筑 Y" (基础值 = 等级 `defense` 字段, 见 A3)
-  4. **恢复**: "N / 游戏时" (每游戏小时回血 N 点, 封顶 `hp_max`; 回血挂
-     TimeManager `game_hour_elapsed`, 见 A5)
+  1. **生命**: HP 条 (`ProgressBar`, StyleBoxFlat 代码绘制) + "当前/上限" — 均为**有效值**
+     (含同伴 `shelter_hp_bonus_percent` 加成, 见 A9.3), 可扣可回
+  2. **攻击**: "基础 X + 加成 Y" (加成 = 建筑加成 + 同伴加成**合并显示**, 建筑加成本期恒 0)
+  3. **防御**: "基础 X + 加成 Y" (基础值 = 等级 `defense` 字段, 见 A3; 加成同上合并显示)
+  4. **恢复**: "N / 游戏时" (N = **有效恢复**, 含同伴加成; 每游戏小时回血 N 点, 封顶有效
+     `hp_max`; 回血挂 TimeManager `game_hour_elapsed`, 见 A5)
 - **关闭三途径**: 点面板外 (`DismissCatcher`) / 再点房子按钮 / Esc
 - **数据来源/自刷新**: ShelterSystem (等级数值 + `current_hp`, 见 A8 存档), 监听
   `hp_changed` + `level_changed` 信号自动刷新 (扣血/回血/升级即时更新)
 - **建筑加成占位**: `ShelterSystem.get_building_attack_bonus()` /
   `get_building_defense_bonus()` 恒返回 0; S2/S3 建筑系统接入后生效
-  (箭塔/炮塔→攻击加成, 围栏/墙→防御加成)
+  (箭塔/炮塔→攻击加成, 围栏/墙→防御加成); 与同伴加成合并进"加成 Y"显示
 
 ### B5. shelter_interior.tscn (庇护所内部)
 
 - 背景 `blank_interior_1920x1080.png`; 全代码 UI 壳 (tscn 只放根节点)
+- **视角定稿: 2.5D 剖面图** (用户确认 2026-10-08): 略俯视 (~20-30°) 的娃娃屋切面,
+  可见房间地板纵深、家具立体感、同伴活动; 成长以剖面扩张表现 (格子解锁/家具变多),
+  **不用纯正视立面图**; 后续房间玩法恢复 2×3 格时按此视角铺场景图 (占位图同名覆盖)
 - **一房一床极简** (用户定稿 2026-10, 其余房间/家具后续版本):
   - `RoomPanel_1` 卧室: 300×220 占位图 `blank_room_panel_512x512.png` + 房名 + `BedLabel`="床 ×1" + "已启用"
   - `CompanionSlot` 同伴名牌 (挂卧室 RoomPanel_1): 显示已入队 1 名 NPC "同伴: 姓名 · 职业",
@@ -851,7 +887,7 @@ boot.tscn → login.tscn → main.tscn ⇄ shelter_interior.tscn
 - **游戏菜单段** (`open(parent, game_menu=true)`, 仅主界面入口带):
   `SlotOption` 3 存档槽 + `SaveButton` 保存进度 + `LoadButton` 读取进度
   (快照 `{shelter, time, quest, npc, recruit}` → SaveManager, 读档 set_state + TaskPanel.set_accepted
-  + NpcSystem.set_state (recruit 镜像回退) 后刷新) +
+  + NpcSystem.set_state (recruit 镜像回退; **set_state 顺序 先 npc 后 shelter**, 见 A8) 后刷新) +
   `MenuStatusLabel` 结果文本 + `BackToTitleButton` 返回标题 (→ login.tscn);
   登录入口 `open(parent)` 不带该段
 
@@ -1156,7 +1192,10 @@ rewards / loot / risk / time / visual / audio
 - 小 CONF 的 `[passive]`/`[active]` 节内除 `npc_type`/`skill` 外的**数值键通用扫描**收入
   bonuses/values 字典 (`[passive]` 其余键 → `passive.bonuses: {field: float}`,
   `[active]` 其余键 → `active.values`), 未来加数值字段**零代码** (如
-  `casualty_reduce_percent = 30` 直接可查)
+  `casualty_reduce_percent = 30` 直接可查); 庇护所属性加成四键
+  `shelter_attack_bonus_percent / shelter_defense_bonus_percent /
+  shelter_recovery_bonus_percent / shelter_hp_bonus_percent` (百分比口径, 每名同伴
+  专精主属性一项 + 全员 hp_max 一项) 即走此通道, 消费/计算见 A9.3
 - `starter_npcs` (shelter.conf) **强制校验**: 引用的 NPC 必须存在且 `recruit_allowed = true`,
   否则 ConfigError 终止启动 (开局三选一候选不得缺位/禁招)
 
