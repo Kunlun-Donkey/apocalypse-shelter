@@ -3,7 +3,8 @@ extends Button
 # ============================================================
 # 招募按钮 + NPC 招募介绍面板 (木板卡片三选一)
 # 挂载: 作为主界面 BottomBar 的 "招募" 按钮 (节点名 Btn_Recruit)
-# 交互: 点击按钮 开/关 面板 (默认隐藏); 点击全屏遮罩关闭; 点整卡选定 NPC (3 选 1)
+# 交互: 点击按钮 开/关 面板 (默认隐藏); 点击全屏遮罩关闭; 每卡"招募"按钮选人入队 → 面板关闭 → 成功弹窗
+#   锁定后 (已选 1 名) 仍可开面板查看三人资料, 三个招募按钮全禁用 (选中卡文案"已招募"); 整卡点击无效
 # 素材: res://assets/npc_recruit/ (board.png 木板 / diamond_purple.png 紫钻 / bar_*.png 属性条, 占位可覆盖)
 # NPC_DATA 字典 = 唯一数据源: 改数值/换钻石/改文案只动字典 (id 对应 configs/npcs/*.conf)
 # 已选状态: 归 NpcSystem (单一数据源, 存 config_id); 本层为"姓名门面"兼容旧接口
@@ -120,6 +121,7 @@ static func get_picked_id() -> String:
 
 var _panel: Control
 var _card_styles: Array[StyleBoxFlat] = []
+var _recruit_buttons: Array[Button] = []
 
 
 func _ready() -> void:
@@ -145,17 +147,21 @@ func _on_mask_input(event: InputEvent) -> void:
 		_panel.visible = false
 
 
-func _on_card_input(event: InputEvent, index: int) -> void:
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		# 一次性锁定: 已选不可换
-		if get_picked_name() == "":
-			var sys := _sys()
-			if sys != null:
-				if sys.recruit(str(NPC_DATA[index].get("id", ""))):
-					_refresh_picked()
-			else:
-				set_picked(str(NPC_DATA[index].get("name", "")))
-				_refresh_picked()
+func _on_recruit_pressed(index: int) -> void:
+	# 一次性锁定: 已选不可换
+	if get_picked_name() != "":
+		return
+	var npc: Dictionary = NPC_DATA[index]
+	var picked_name := str(npc.get("name", ""))
+	var sys := _sys()
+	if sys != null:
+		if not sys.recruit(str(npc.get("id", ""))):
+			return
+	else:
+		set_picked(picked_name)
+	_refresh_picked()
+	_panel.visible = false
+	_show_success_popup(picked_name)
 
 
 func _refresh_picked() -> void:
@@ -163,6 +169,68 @@ func _refresh_picked() -> void:
 	for i in _card_styles.size():
 		var picked := picked_name == str(NPC_DATA[i].get("name", "")) and picked_name != ""
 		_card_styles[i].border_color = BROWN_DARK if picked else Color(0, 0, 0, 0)
+		if i < _recruit_buttons.size():
+			var btn := _recruit_buttons[i]
+			btn.disabled = picked_name != ""
+			btn.text = "已招募" if picked else "招募"
+
+
+# ---------------- 成功弹窗 ----------------
+
+func _show_success_popup(npc_name: String) -> void:
+	var panel := Control.new()
+	panel.name = "RecruitSuccessPanel"
+	panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+
+	var mask := ColorRect.new()
+	mask.name = "RecruitSuccessMask"
+	mask.color = Color(0, 0, 0, 0.55)
+	mask.set_anchors_preset(Control.PRESET_FULL_RECT)
+	panel.add_child(mask)
+
+	var center := CenterContainer.new()
+	center.name = "RecruitSuccessCenter"
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(center)
+
+	var box := PanelContainer.new()
+	box.name = "RecruitSuccessBox"
+	box.custom_minimum_size = Vector2(520, 240)
+	var box_style := StyleBoxFlat.new()
+	box_style.bg_color = Color(0.08, 0.1, 0.14, 0.97)
+	box_style.corner_radius_top_left = 12
+	box_style.corner_radius_top_right = 12
+	box_style.corner_radius_bottom_left = 12
+	box_style.corner_radius_bottom_right = 12
+	box_style.content_margin_left = 32
+	box_style.content_margin_right = 32
+	box_style.content_margin_top = 32
+	box_style.content_margin_bottom = 32
+	box.add_theme_stylebox_override("panel", box_style)
+	center.add_child(box)
+
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 20)
+	box.add_child(v)
+
+	var label := Label.new()
+	label.name = "RecruitSuccessLabel"
+	label.text = "成功招募 %s！可在庇护所内查看详细信息" % npc_name
+	label.add_theme_font_size_override("font_size", 24)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(label)
+
+	var ok_button := Button.new()
+	ok_button.name = "RecruitSuccessOkButton"
+	ok_button.text = "确定"
+	ok_button.custom_minimum_size = Vector2(200, 52)
+	ButtonSkin.apply(ok_button)
+	ok_button.pressed.connect(panel.queue_free)
+	v.add_child(ok_button)
+
+	_find_scene_root().add_child(panel)
 
 
 # ---------------- UI 构建 ----------------
@@ -187,7 +255,7 @@ func _build_panel() -> Control:
 
 	var box := PanelContainer.new()
 	box.name = "RecruitBox"
-	box.custom_minimum_size = Vector2(1400, 700)
+	box.custom_minimum_size = Vector2(1400, 760)
 	var box_style := StyleBoxFlat.new()
 	box_style.bg_color = Color(0.08, 0.1, 0.14, 0.97)
 	box_style.corner_radius_top_left = 12
@@ -219,7 +287,7 @@ func _build_card(index: int) -> PanelContainer:
 
 	var card := PanelContainer.new()
 	card.name = "NpcCard_%d" % slot
-	card.custom_minimum_size = Vector2(380, 620)
+	card.custom_minimum_size = Vector2(380, 680)
 	var card_style := StyleBoxFlat.new()
 	card_style.border_width_left = 3
 	card_style.border_width_top = 3
@@ -232,7 +300,6 @@ func _build_card(index: int) -> PanelContainer:
 	card_style.content_margin_bottom = 3
 	card.add_theme_stylebox_override("panel", card_style)
 	_card_styles.append(card_style)
-	card.gui_input.connect(_on_card_input.bind(index))
 
 	# 木板底层 (铺满卡片; 与内容层同占 PanelContainer 内容区)
 	var board := TextureRect.new()
@@ -314,6 +381,15 @@ func _build_card(index: int) -> PanelContainer:
 		str(npc.get("passive_title", "")), str(npc.get("passive_desc", ""))))
 	v.add_child(_build_skill_block("ActiveTitle_%d" % slot, "ActiveDesc_%d" % slot,
 		str(npc.get("active_title", "")), str(npc.get("active_desc", ""))))
+
+	var recruit_button := Button.new()
+	recruit_button.name = "RecruitButton_%d" % slot
+	recruit_button.text = "招募"
+	recruit_button.custom_minimum_size = Vector2(0, 48)
+	recruit_button.pressed.connect(_on_recruit_pressed.bind(index))
+	ButtonSkin.apply(recruit_button)
+	v.add_child(recruit_button)
+	_recruit_buttons.append(recruit_button)
 
 	return card
 

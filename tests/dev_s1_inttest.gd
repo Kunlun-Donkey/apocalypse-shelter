@@ -4,7 +4,7 @@ extends Node
 #   godot --headless --path . res://tests/dev_s1_inttest.tscn
 # 覆盖: 登录"开始新游戏" → Main (顶部资源条/等级 + 底部 6 功能按钮)
 #       → 3 占位按钮提示 "后续版本开放: X"
-#       → 招募面板 (Btn_Recruit 木板卡片三选一: 唐文轩/张睿/吴齐越 + 一次性选人锁定)
+#       → 招募面板 (Btn_Recruit 木板卡片: 唐文轩/张睿/吴齐越, 每卡招募按钮+成功弹窗 + 一次性选人锁定)
 #         已选状态归 NpcSystem (config_id), BtnRecruit 为姓名门面 (is_picked/get_picked_id/被动查询)
 #       → 任务卷轴面板 (列表 任务1~10/详情/接受/放弃)
 #       → "进入" → ShelterInterior (一房一床 RoomPanel_1/BedLabel + 升级区)
@@ -12,7 +12,7 @@ extends Node
 #       → 室内升级 30s 冷却 → BackButton 返回 Main
 #       → 设置弹层 game_menu 段 (存读档 3 槽/返回标题, 含 quest.accepted +
 #         npc.picked(config_id)/recruit.picked(姓名镜像) round-trip)
-# 断言项数: 88 (原 73 → 88; 新增 15 = 已招募 CompanionSlot 名牌/详情面板 12 + 空位守卫 3)
+# 断言项数: 94 (原 88 → 94; 招募段 6→12: 每卡招募按钮/成功弹窗/锁定后禁用)
 # ============================================================
 
 var _failed := false
@@ -147,7 +147,7 @@ func _run() -> void:
 	await _settle()
 	_check(recruit_panel.visible, "三击 Btn_Recruit 面板再次显示")
 
-	_check(_find_by_name(recruit_panel, "RecruitBox") != null, "面板含 RecruitBox (1400×700 弹窗)")
+	_check(_find_by_name(recruit_panel, "RecruitBox") != null, "面板含 RecruitBox (1400×760 弹窗)")
 	_check(_find_by_name(recruit_panel, "Mask") != null, "面板含全屏遮罩 Mask")
 	var cards_ok := true
 	var expect_names := ["唐文轩", "张睿", "吴齐越"]
@@ -178,20 +178,49 @@ func _run() -> void:
 	_check(desc2 != null and desc2.text.contains("外科医师"), "Desc_2 含张睿背景文案")
 	_check(_find_by_name(recruit_panel, "Diamond_1") != null and _find_by_name(recruit_panel, "Diamond_3") != null, "每卡顶部有钻石 Diamond_N")
 
-	# 整卡点选 (3 选 1): 点 NpcCard_2 → 张睿
+	# 每卡招募按钮+成功弹窗 (3 选 1 一次性锁定): 点 RecruitButton_2 招募 张睿
 	var click := InputEventMouseButton.new()
 	click.pressed = true
 	click.button_index = MOUSE_BUTTON_LEFT
+	var btn1 := _find_by_name(recruit_panel, "RecruitButton_1") as Button
+	var btn2 := _find_by_name(recruit_panel, "RecruitButton_2") as Button
+	var btn3 := _find_by_name(recruit_panel, "RecruitButton_3") as Button
+	_check(btn1 != null and btn2 != null and btn3 != null, "每卡含招募按钮 RecruitButton_1/2/3")
+	if btn2 == null:
+		_abort()
+		return
 	var card2 := _find_by_name(recruit_panel, "NpcCard_2") as Control
 	if card2 == null:
 		_abort()
 		return
+	# 整卡点击不再触发招募
 	card2.gui_input.emit(click)
 	await get_tree().process_frame
-	_check(BtnRecruit.is_picked("张睿"), "点整卡后 BtnRecruit.picked = 张睿")
-	_check(BtnRecruit.get_picked_id() == "npc.medic_01", "点整卡后 BtnRecruit.get_picked_id = npc.medic_01")
+	_check(not BtnRecruit.is_picked("张睿"), "整卡点击不触发招募 (NpcCard_2 gui_input 不入队)")
+	# 点招募按钮 → 入队 + 面板关闭 + 成功弹窗
+	btn2.pressed.emit()
+	await _settle()
+	_check(not recruit_panel.visible, "点招募按钮后面板关闭")
+	_check(BtnRecruit.is_picked("张睿") and BtnRecruit.get_picked_id() == "npc.medic_01", "BtnRecruit 入队 张睿 (get_picked_id = npc.medic_01)")
 	var npc_root := get_tree().root.get_node_or_null("NpcSystem") as NpcSystem
 	_check(npc_root != null and absf(npc_root.get_passive_bonus("casualty_reduce_percent") - 30.0) < 0.001, "NpcSystem 被动 casualty_reduce_percent = 30")
+	# 成功弹窗 (挂在场景根)
+	var success_panel := _find_by_name(main_scene, "RecruitSuccessPanel") as Control
+	var success_label := _find_by_name(main_scene, "RecruitSuccessLabel") as Label
+	_check(success_panel != null and success_label != null \
+			and success_label.text == "成功招募 张睿！可在庇护所内查看详细信息", "成功弹窗 RecruitSuccessPanel 文案 = 成功招募 张睿！可在庇护所内查看详细信息")
+	var success_ok := _find_by_name(main_scene, "RecruitSuccessOkButton") as Button
+	if success_panel == null or success_ok == null:
+		_abort()
+		return
+	success_ok.pressed.emit()
+	await _settle()
+	_check(_find_by_name(main_scene, "RecruitSuccessPanel") == null, "点 RecruitSuccessOkButton 后成功弹窗销毁")
+	# 锁定后重开面板仍可查看三人
+	recruit_btn.pressed.emit()
+	await _settle()
+	_check(recruit_panel.visible, "锁定后重开面板仍可查看 (Btn_Recruit 再开)")
+	# 已选卡描边 / 未选卡无描边
 	var card2_style := card2.get_theme_stylebox("panel") as StyleBoxFlat
 	_check(card2_style != null and card2_style.border_color.a > 0.5, "已选卡显示深棕描边")
 	var card1 := _find_by_name(recruit_panel, "NpcCard_1") as Control
@@ -199,7 +228,9 @@ func _run() -> void:
 	if card1 != null:
 		card1_style = card1.get_theme_stylebox("panel") as StyleBoxFlat
 	_check(card1_style != null and card1_style.border_color.a < 0.5, "未选卡无描边")
-
+	# 锁定后按钮状态: 文案 已招募 + 三按钮全禁用
+	_check(btn2.text == "已招募" and btn1 != null and btn3 != null \
+			and btn1.disabled and btn2.disabled and btn3.disabled, "锁定后 RecruitButton_2 文案 已招募 且三按钮全禁用")
 	# 点遮罩关闭
 	var mask := _find_by_name(recruit_panel, "Mask") as Control
 	if mask == null:
