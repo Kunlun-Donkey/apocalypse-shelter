@@ -95,7 +95,7 @@ OFF: 其余全部 — 禁止实现、禁止初始化、禁止写 UI
 - [x] `system.conf` 中任一 OFF 系统未被初始化 (零初始化验证)  ← autotest
 
 自动回归入口: `tests/dev_s1_autotest.tscn` (49 项) + `dev_s1_navtest.tscn` (15 项跳转+资源条+人口/天气/日夜) +
-`dev_s1_settest.tscn` (11 项设置面板) + `dev_s1_inttest.tscn` (73 项世界/室内导航+招募面板+任务面板+游戏菜单), headless 运行,
+`dev_s1_settest.tscn` (11 项设置面板) + `dev_s1_inttest.tscn` (88 项世界/室内导航+招募面板+任务面板+游戏菜单, 含 CompanionSlot 同伴名牌+详情面板), headless 运行,
 命令见 `.claude/skills/test/SKILL.md`。
 
 ## 3. Dev-S2 野外物资 + 资源 + 基础建筑
@@ -336,7 +336,9 @@ button_skin.gd 处理, 不放 blank。新增图片资源后必须先 `godot --he
 具体加载兜底/换景规则见逻辑书 B7。
 
 **庇护所内部场景 (S1 表现层扩展)**: `src/scenes/shelter_interior.tscn` (全代码 UI 壳),
-一房一床极简 (RoomPanel_1 卧室 + "床 ×1") + 升级区 (升级唯一入口)。布局与交互见逻辑书 B5。
+一房一床极简 (RoomPanel_1 卧室 + "床 ×1") + 升级区 (升级唯一入口)。卧室另挂 CompanionSlot
+同伴名牌 (已入队 NPC "同伴: 姓名 · 职业", 点击弹 NpcDetailPanel 详情面板 `src/ui/npc_detail_panel.gd`;
+未招募 "同伴: 空 (未招募)" 灰化不可点)。布局与交互见逻辑书 B5。
 
 ### 13.6 音频素材格式/尺寸总规范
 

@@ -32,7 +32,7 @@ $GODOT --headless --path . res://tests/dev_s1_navtest.tscn
 # 11 项: 设置面板 (弹出/全屏/音量持久化/Esc 关闭)
 $GODOT --headless --path . res://tests/dev_s1_settest.tscn
 
-# 73 项: 世界界面 6 按钮/招募面板(木板卡片三选一+NpcSystem 招募契约)/任务卷轴面板(列表/接受/放弃)/进入室内 (一房一床+升级冷却)/返回/设置游戏菜单 (存读档 round-trip)
+# 88 项: 世界界面 6 按钮/招募面板(木板卡片三选一+NpcSystem 招募契约)/任务卷轴面板(列表/接受/放弃)/进入室内 (一房一床+升级冷却+室内同伴名牌(CompanionSlot+详情面板))/返回/设置游戏菜单 (存读档 round-trip)
 $GODOT --headless --path . res://tests/dev_s1_inttest.tscn
 ```
 

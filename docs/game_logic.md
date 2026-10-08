@@ -788,6 +788,12 @@ boot.tscn → login.tscn → main.tscn ⇄ shelter_interior.tscn
 - 背景 `blank_interior_1920x1080.png`; 全代码 UI 壳 (tscn 只放根节点)
 - **一房一床极简** (用户定稿 2026-10, 其余房间/家具后续版本):
   - `RoomPanel_1` 卧室: 300×220 占位图 `blank_room_panel_512x512.png` + 房名 + `BedLabel`="床 ×1" + "已启用"
+  - `CompanionSlot` 同伴名牌 (挂卧室 RoomPanel_1): 显示已入队 1 名 NPC "同伴: 姓名 · 职业",
+    点击弹出 **NpcDetailPanel 详情面板** (`src/ui/npc_detail_panel.gd`: 钻石/姓名/职业/熟悉度/
+    三条属性条/背景描述/被动/主动技能, 全 Detail 前缀节点名, Mask 点击或 Esc 关闭);
+    未招募显示 "同伴: 空 (未招募)" 且灰化不可点
+  - 范围只看已入队 1 名 (三选一锁定, 落选者不再展示); 数据源=BtnRecruit.NPC_DATA
+    (纯 UI 层展示, 不读 CONF)
   - 原 2×3 五房 (卧室/储藏室/厨房/工作台/大门) 与 RoomSummary/`building_slots` 解锁展示**已移除**,
     待后续房间玩法版本恢复扩展
 - **升级区** (自 main 迁入; 升级唯一入口): `UpgradeButton` (升级庇护所) +

@@ -8,10 +8,11 @@ extends Node
 #         已选状态归 NpcSystem (config_id), BtnRecruit 为姓名门面 (is_picked/get_picked_id/被动查询)
 #       → 任务卷轴面板 (列表 任务1~10/详情/接受/放弃)
 #       → "进入" → ShelterInterior (一房一床 RoomPanel_1/BedLabel + 升级区)
+#       → 卧室 CompanionSlot 同伴名牌 → NpcDetailPanel 详情 (Mask/Esc 关闭 + 空位守卫)
 #       → 室内升级 30s 冷却 → BackButton 返回 Main
 #       → 设置弹层 game_menu 段 (存读档 3 槽/返回标题, 含 quest.accepted +
 #         npc.picked(config_id)/recruit.picked(姓名镜像) round-trip)
-# 断言项数: 73 (原 70 → 73; 新增 3 = get_picked_id 1 + NpcSystem 被动 1 + 存档快照 npc.picked 1)
+# 断言项数: 88 (原 73 → 88; 新增 15 = 已招募 CompanionSlot 名牌/详情面板 12 + 空位守卫 3)
 # ============================================================
 
 var _failed := false
@@ -270,6 +271,60 @@ func _run() -> void:
 	var bed := _find_by_name(interior, "BedLabel") as Label
 	_check(bed != null and bed.text == "床 ×1", "室内 BedLabel = 床 ×1")
 
+	# 室内: 卧室同伴名牌 CompanionSlot + NpcDetailPanel 详情 (已招募 张睿)
+	var slot := _find_by_name(interior, "CompanionSlot") as Button
+	_check(slot != null, "室内存在 CompanionSlot (同伴名牌)")
+	if slot == null:
+		_abort()
+		return
+	_check(slot.text == "同伴: 张睿 · 医师", "CompanionSlot 文案 = 同伴: 张睿 · 医师")
+	_check(not slot.disabled, "已招募 CompanionSlot 可点 (disabled=false)")
+	slot.pressed.emit()
+	await get_tree().process_frame
+	var d_box := _find_by_name(interior, "DetailBox")
+	_check(d_box != null, "点 CompanionSlot 弹出 NpcDetailPanel (DetailBox)")
+	if d_box == null:
+		_abort()
+		return
+	var d_name := _find_by_name(interior, "DetailName") as Label
+	_check(d_name != null and d_name.text == "张睿", "DetailName = 张睿")
+	var d_title := _find_by_name(interior, "DetailTitle") as Label
+	_check(d_title != null and d_title.text == "医师", "DetailTitle = 医师")
+	var d_fam := _find_by_name(interior, "DetailFamiliarity") as Label
+	_check(d_fam != null and d_fam.text.contains("35"), "DetailFamiliarity 含 35")
+	var d_bar3 := _find_by_name(interior, "DetailAttrBar_3") as TextureProgressBar
+	_check(d_bar3 != null and d_bar3.value == 9.0, "DetailAttrBar_3 智慧 9/10")
+	var d_desc := _find_by_name(interior, "DetailDesc") as Label
+	_check(d_desc != null and d_desc.text.contains("外科医师"), "DetailDesc 含外科医师文案")
+	var d_passive := _find_by_name(interior, "DetailPassiveTitle") as Label
+	_check(d_passive != null and d_passive.text == "【应急救护】", "DetailPassiveTitle = 【应急救护】")
+	var d_active := _find_by_name(interior, "DetailActiveTitle") as Label
+	_check(d_active != null and d_active.text == "【集中救治】", "DetailActiveTitle = 【集中救治】")
+
+	# 关闭验证 (Mask 点击 + Esc 两布尔合并一条 _check): 点 Mask 关闭 → 重开 → Esc 关闭
+	var d_mask := _find_by_name(interior, "DetailMask") as Control
+	var close_ok := d_mask != null
+	if close_ok:
+		d_mask.gui_input.emit(click)
+		await get_tree().process_frame
+		close_ok = _find_by_name(interior, "DetailBox") == null
+	if close_ok:
+		slot.pressed.emit()
+		await get_tree().process_frame
+		d_box = _find_by_name(interior, "DetailBox")
+		close_ok = d_box != null
+	if close_ok:
+		var d_panel: Node = _find_by_name(interior, "NpcDetailPanel")
+		close_ok = d_panel != null
+		if close_ok:
+			var esc := InputEventKey.new()
+			esc.keycode = KEY_ESCAPE
+			esc.pressed = true
+			d_panel._unhandled_input(esc)
+			await get_tree().process_frame
+			close_ok = _find_by_name(interior, "DetailBox") == null
+	_check(close_ok, "Mask 点击关闭详情 + Esc 关闭详情 (NpcDetailPanel)")
+
 	# 室内: 升级区 (自 main 迁入)
 	var upgrade := _find_by_name(interior, "UpgradeButton") as Button
 	_check(upgrade != null, "室内存在 UpgradeButton (升级只在室内)")
@@ -357,6 +412,28 @@ func _run() -> void:
 	var save_data: Dictionary = SaveManager.load_game(3)
 	var npc_part: Dictionary = save_data.get("npc", {})
 	_check(str(npc_part.get("picked", "")) == "npc.medic_01", "存档快照 data.npc.picked = npc.medic_01 (config_id)")
+
+	# ---- 空位块: BtnRecruit.reset() 清招募后重进室内 CompanionSlot 空位守卫 (收尾, 不污染存读档段) ----
+	BtnRecruit.reset()
+	var enter_again := _find_by_name(back_scene, "EnterShelterButton") as Button
+	if enter_again == null:
+		_abort()
+		return
+	enter_again.pressed.emit()
+	await _settle()
+	var interior2 := get_tree().current_scene
+	if interior2 == null:
+		_abort()
+		return
+	var slot2 := _find_by_name(interior2, "CompanionSlot") as Button
+	_check(slot2 != null and slot2.text == "同伴: 空 (未招募)", "空位 CompanionSlot 文案 = 同伴: 空 (未招募)")
+	_check(slot2 != null and slot2.disabled, "空位 CompanionSlot 禁用 (disabled=true)")
+	var empty_ok := slot2 != null
+	if empty_ok:
+		slot2.pressed.emit()
+		await get_tree().process_frame
+		empty_ok = _find_by_name(interior2, "DetailBox") == null
+	_check(empty_ok, "空位点 CompanionSlot 不弹详情 (空 id 守卫)")
 
 	if _failed:
 		printerr("INTTEST: FAILED")

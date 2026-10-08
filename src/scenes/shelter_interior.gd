@@ -2,6 +2,7 @@ extends Control
 # ============================================================
 # ShelterInterior — 庇护所内部场景 (Dev-S1 极简 UI 壳, blank 占位图, 后续填实际 UI 资源)
 # 一房一床极简 + 升级区: 只有 卧室(RoomPanel_1, 床 ×1) + 庇护所升级 (从 main 迁入)
+# 同伴名牌: CompanionSlot 按钮显示已入队同伴 (BtnRecruit), 点击开 NpcDetailPanel 详情面板
 # 其余房间/家具/建造/资源/入住等玩法系统后续版本开放
 # ============================================================
 
@@ -13,6 +14,7 @@ var _level_label: Label
 var _upgrade_button: Button
 var _cooldown_label: Label
 var _upgrade_status_label: Label
+var _companion_slot: Button
 
 
 func _ready() -> void:
@@ -22,6 +24,7 @@ func _ready() -> void:
 	_shelter.upgrade_completed.connect(_on_upgrade_completed)
 	_shelter.level_changed.connect(_on_level_changed)
 	_refresh()
+	_refresh_companion_slot()
 
 
 func _process(_delta: float) -> void:
@@ -163,6 +166,15 @@ func _build_room_panel() -> PanelContainer:
 	bed_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(bed_label)
 
+	var companion_slot := Button.new()
+	companion_slot.name = "CompanionSlot"
+	companion_slot.custom_minimum_size = Vector2(0, 48)
+	companion_slot.add_theme_font_size_override("font_size", 22)
+	companion_slot.pressed.connect(_on_companion_slot_pressed)
+	ButtonSkin.apply(companion_slot)
+	box.add_child(companion_slot)
+	_companion_slot = companion_slot
+
 	var status_label := Label.new()
 	status_label.text = "已启用"
 	status_label.add_theme_font_size_override("font_size", 18)
@@ -192,6 +204,26 @@ func _refresh() -> void:
 			_cooldown_label.text = "升级耗时 %.0f 秒 (S1 临时冷却)" % ShelterSystem.TEMP_UPGRADE_COOLDOWN_REAL_SECONDS
 
 
+# 同伴名牌刷新 (只读 BtnRecruit 状态; 不接信号不每帧, 由调用方按需刷新)
+func _refresh_companion_slot() -> void:
+	if _companion_slot == null:
+		return
+	var picked_id: String = BtnRecruit.get_picked_id()
+	if picked_id.is_empty():
+		_companion_slot.text = "同伴: 空 (未招募)"
+		_companion_slot.disabled = true
+		return
+	var npc_name := ""
+	var npc_title := ""
+	for entry: Dictionary in BtnRecruit.NPC_DATA:
+		if str(entry.get("id", "")) == picked_id:
+			npc_name = str(entry.get("name", ""))
+			npc_title = str(entry.get("title", ""))
+			break
+	_companion_slot.text = "同伴: %s · %s" % [npc_name, npc_title]
+	_companion_slot.disabled = false
+
+
 # ---------------- 交互 ----------------
 
 func _on_upgrade_pressed() -> void:
@@ -205,6 +237,13 @@ func _on_upgrade_pressed() -> void:
 
 func _on_back_pressed() -> void:
 	get_tree().change_scene_to_file(MAIN_SCENE)
+
+
+func _on_companion_slot_pressed() -> void:
+	var picked_id: String = BtnRecruit.get_picked_id()
+	if picked_id.is_empty():
+		return
+	NpcDetailPanel.open(self, picked_id)
 
 
 func _on_upgrade_started(_cooldown: float) -> void:
