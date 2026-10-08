@@ -39,7 +39,7 @@ func _build_ui() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 
 	var bg := TextureRect.new()
-	bg.texture = load("res://assets/blank_interior_1920x1080.png")
+	bg.texture = load(_interior_bg_path())
 	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -123,6 +123,18 @@ func _build_ui() -> void:
 	back_button.pressed.connect(_on_back_pressed)
 	ButtonSkin.apply(back_button)
 	root_box.add_child(back_button)
+
+
+# 室内底图: 按庇护所等级找 shelter_leve%d_inside.png (2.5D 剖面场景图),
+# 缺当前级回退 leve1, 仍缺回退 blank 占位 (命名对齐用户素材, 找不到不崩)
+func _interior_bg_path() -> String:
+	var path := "res://assets/shelter/shelter_leve%d_inside.png" % _shelter.current_level
+	if ResourceLoader.exists(path):
+		return path
+	path = "res://assets/shelter/shelter_leve1_inside.png"
+	if ResourceLoader.exists(path):
+		return path
+	return "res://assets/blank_interior_1920x1080.png"
 
 
 # 房间面板: 一房一床极简 (占位纹理 + 房名 "卧室" + BedLabel "床 ×1" + "已启用")
