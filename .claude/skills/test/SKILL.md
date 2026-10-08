@@ -23,7 +23,7 @@ $GODOT --headless --import
 ## 测试四件套 (可并行跑)
 
 ```bash
-# 23 项: 配置/等级链/升级冷却/存读档/零初始化 (含 2×30s 冷却, 整体 ~70s)
+# 49 项: 配置/等级链/升级冷却/存读档/npc 招募入队+被动查询/零初始化 (含 2×30s 冷却, 整体 ~80s)
 $GODOT --headless --path . res://tests/dev_s1_autotest.tscn
 
 # 15 项: 登录→Main 跳转 + 顶部资源条/人口/天气/日夜图标, 新游戏重置 Lv1 第1天 08:00
@@ -32,7 +32,7 @@ $GODOT --headless --path . res://tests/dev_s1_navtest.tscn
 # 11 项: 设置面板 (弹出/全屏/音量持久化/Esc 关闭)
 $GODOT --headless --path . res://tests/dev_s1_settest.tscn
 
-# 70 项: 世界界面 6 按钮/招募面板(木板卡片三选一)/任务卷轴面板(列表/接受/放弃)/进入室内 (一房一床+升级冷却)/返回/设置游戏菜单 (存读档 round-trip)
+# 73 项: 世界界面 6 按钮/招募面板(木板卡片三选一+NpcSystem 招募契约)/任务卷轴面板(列表/接受/放弃)/进入室内 (一房一床+升级冷却)/返回/设置游戏菜单 (存读档 round-trip)
 $GODOT --headless --path . res://tests/dev_s1_inttest.tscn
 ```
 

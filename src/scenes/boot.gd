@@ -13,7 +13,7 @@ func _ready() -> void:
 		get_tree().quit(1)
 		return
 
-	# 按开关初始化 System。S1 仅 shelter 开启; 其余 OFF 系统一律不创建。
+	# 按开关初始化 System。S1 = shelter + npc (招募提前实施); 其余 OFF 系统一律不创建。
 	if ConfigManager.is_enabled("shelter"):
 		var shelter := ShelterSystem.new()
 		shelter.name = "ShelterSystem"
@@ -22,6 +22,11 @@ func _ready() -> void:
 		printerr("CONFIG ERROR: Dev-S1 requires system.conf shelter = true")
 		get_tree().quit(1)
 		return
+
+	if ConfigManager.is_enabled("npc"):
+		var npc := NpcSystem.new()
+		npc.name = "NpcSystem"
+		get_tree().root.add_child.call_deferred(npc)
 
 	print("BOOT OK: enabled systems = %s" % [ConfigManager.get_enabled_systems()])
 	get_tree().change_scene_to_file.call_deferred("res://src/scenes/login.tscn")

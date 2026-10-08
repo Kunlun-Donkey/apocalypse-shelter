@@ -9,6 +9,7 @@ extends Node
 
 const SYSTEM_CONF_PATH := "res://configs/system.conf"
 const RESOURCE_REGISTRY_PATH := "res://configs/resources/resource.conf"
+const NPC_REGISTRY_PATH := "res://configs/npcs/npcs.conf"
 const CONF_VERSION := 1
 
 # path -> { section -> { key -> raw string } }
@@ -18,6 +19,7 @@ var _dependencies := {}   # 系统名 -> Array[String]
 var _engine := {}         # 引擎参数 key -> raw string
 var _shelter_base := {}   # shelter.conf [base]/[visual] 解析结果
 var _shelter_levels := {} # int -> level 字典 (解析后)
+var _npcs := {}           # npc id -> 解析后字典 (npc 开启时填充)
 var _error := ""
 
 
@@ -29,6 +31,10 @@ func load_all() -> int:
 		return err
 	if is_enabled("shelter"):
 		err = _load_shelter_conf()
+		if err != OK:
+			return err
+	if is_enabled("npc"):
+		err = _load_npc_conf()
 		if err != OK:
 			return err
 	return OK
@@ -108,6 +114,38 @@ func get_resource_display_items() -> Array:
 			"base_capacity": _parse_int(flow.get("base_capacity", ""), 0),
 		})
 	return out
+
+
+# ---------------- npc 访问器 (npc 开启时有效) ----------------
+
+func get_npc_ids() -> Array:
+	return _npcs.keys()
+
+
+func get_npc(npc_id: String) -> Dictionary:
+	return _npcs.get(npc_id, {})
+
+
+func has_npc(npc_id: String) -> bool:
+	return _npcs.has(npc_id)
+
+
+# shelter.conf [initial_state] starter_npcs (三选一候选 id 列表)
+func get_starter_npcs() -> Array:
+	var init := get_initial_state()
+	var starters: Array = init.get("starter_npcs", [])
+	return starters
+
+
+# 仅旧档迁移兼容: 姓名 → id 映射 (ID 规范禁止用 name 查数据, 新代码一律走 id)
+func find_npc_id_by_name(npc_name: String) -> String:
+	if npc_name.is_empty():
+		return ""
+	for npc_id in _npcs:
+		var entry: Dictionary = _npcs[npc_id]
+		if str(entry.get("name", "")) == npc_name:
+			return str(npc_id)
+	return ""
 
 
 # ============================================================
@@ -414,3 +452,120 @@ func _parse_level(path: String, section: String) -> Dictionary:
 		"unlocks_systems": parse_list(s.get("unlocks_systems", "[]")),
 		"unlocks_locations": parse_list(s.get("unlocks_locations", "[]")),
 	}
+
+
+# ============================================================
+# npcs/ NPC 定义 (仅 npc 开启时加载)
+# registry → 逐文件解析 [meta]/[base]/[passive]/[active]/[functions]/[tags]
+# ============================================================
+
+func _load_npc_conf() -> int:
+	var err := _load_raw(NPC_REGISTRY_PATH)
+	if err != OK:
+		return err
+	var meta := _section(NPC_REGISTRY_PATH, "meta")
+	if meta.get("schema", "") != "npc_registry":
+		return _fail("ConfigError: npcs.conf [meta] schema must be 'npc_registry'")
+
+	_npcs.clear()
+	var files := parse_list(_section(NPC_REGISTRY_PATH, "registry").get("files", ""))
+	if files.is_empty():
+		return _fail("ConfigError: npcs.conf [registry] files is empty")
+	for file_rel in files:
+		var path := "res://configs/" + str(file_rel).strip_edges()
+		err = _load_npc_file(path)
+		if err != OK:
+			return err
+
+	# starter_npcs 强制校验 (逻辑书 E2): 必须存在且 recruit_allowed=true
+	var starters: Array = get_initial_state().get("starter_npcs", [])
+	if starters.is_empty():
+		return _fail("MissingData: shelter.conf [initial_state] starter_npcs is empty")
+	for starter_id in starters:
+		var sid := str(starter_id)
+		if not _npcs.has(sid):
+			return _fail("MissingData: starter_npcs 引用不存在的 npc id: %s" % sid)
+		var entry: Dictionary = _npcs[sid]
+		if not entry.get("recruit_allowed", false):
+			return _fail("ConfigError: starter_npcs %s recruit_allowed = false" % sid)
+	return OK
+
+
+func _load_npc_file(path: String) -> int:
+	var err := _load_raw(path)
+	if err != OK:
+		return err
+	var meta := _section(path, "meta")
+	if meta.get("schema", "") != "npc":
+		return _fail("ConfigError: %s [meta] schema must be 'npc'" % path)
+	var npc_id: String = str(meta.get("id", "")).strip_edges()
+	if npc_id.is_empty() or not npc_id.begins_with("npc."):
+		return _fail("ConfigError: %s [meta] id 必须是 npc.* 格式, got: %s" % [path, npc_id])
+	if _npcs.has(npc_id):
+		return _fail("ConfigError: duplicate npc id: %s (%s)" % [npc_id, path])
+
+	var base := _section(path, "base")
+	var npc_name: String = str(base.get("name", "")).strip_edges()
+	if npc_name.is_empty():
+		return _fail("MissingData: %s [base] name is empty" % path)
+
+	# [passive]/[active] 数值键通用扫描 (逻辑书 D2.7): 除 npc_type/skill 外的
+	# 数值键一律收入 bonuses/values 字典, 未来加被动/主动数值字段零代码
+	var passive := _section(path, "passive")
+	var passive_bonuses := {}
+	for key in passive:
+		if key == "npc_type" or key == "skill":
+			continue
+		var raw := str(passive[key])
+		if raw.strip_edges().is_valid_float() or raw.strip_edges().is_valid_int():
+			passive_bonuses[str(key)] = _parse_float(raw, 0.0)
+
+	var active := _section(path, "active")
+	var active_values := {}
+	for key in active:
+		if key == "skill":
+			continue
+		var raw := str(active[key])
+		if raw.strip_edges().is_valid_float() or raw.strip_edges().is_valid_int():
+			active_values[str(key)] = _parse_float(raw, 0.0)
+
+	# dormant ref (逻辑书 E2): spawn_region 引用 location.* 等未开启系统 → 告警继续
+	for region in parse_list(base.get("spawn_region", "[]")):
+		var ref_id := str(region)
+		var ref_prefix: String = ref_id.substr(0, ref_id.find(".")) if ref_id.contains(".") else ref_id
+		if not ref_prefix.is_empty() and not is_enabled(ref_prefix):
+			push_warning("DormantRef: %s spawn_region %s (系统 %s 未开启, 休眠)" % [npc_id, ref_id, ref_prefix])
+
+	var functions := _section(path, "functions")
+	var tags_section := _section(path, "tags")
+	_npcs[npc_id] = {
+		"id": npc_id,
+		"name": npc_name,
+		"title": str(base.get("title", "")).strip_edges(),
+		"identity": str(base.get("identity", "")).strip_edges(),
+		"familiarity": _parse_int(base.get("familiarity", ""), 0),
+		"attr_stamina": _parse_int(base.get("attr_stamina", ""), 0),
+		"attr_survival": _parse_int(base.get("attr_survival", ""), 0),
+		"attr_wisdom": _parse_int(base.get("attr_wisdom", ""), 0),
+		"spawn_region": parse_list(base.get("spawn_region", "[]")),
+		"spawn_condition": str(base.get("spawn_condition", "")).strip_edges(),
+		"repeatable": _parse_bool(base.get("repeatable", ""), false),
+		"recruit_allowed": _parse_bool(base.get("recruit_allowed", ""), false),
+		"passive": {
+			"npc_type": str(passive.get("npc_type", "")).strip_edges(),
+			"skill": str(passive.get("skill", "")).strip_edges(),
+			"bonuses": passive_bonuses,
+		},
+		"active": {
+			"skill": str(active.get("skill", "")).strip_edges(),
+			"values": active_values,
+		},
+		"functions": {
+			"services": parse_list(functions.get("services", "[]")),
+			"trade_table": parse_list(functions.get("trade_table", "[]")),
+			"quests": parse_list(functions.get("quests", "[]")),
+			"events": parse_list(functions.get("events", "[]")),
+		},
+		"tags": parse_list(tags_section.get("tags", "[]")),
+	}
+	return OK

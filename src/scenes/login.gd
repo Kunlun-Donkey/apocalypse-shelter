@@ -149,6 +149,9 @@ func _on_new_game() -> void:
 	shelter.new_game()
 	TimeManager.new_game()
 	TaskPanel.reset()
+	var npc_sys := get_node_or_null("/root/NpcSystem") as NpcSystem
+	if npc_sys != null:
+		npc_sys.new_game()
 	BtnRecruit.reset()
 	get_tree().change_scene_to_file(MAIN_SCENE)
 
@@ -177,8 +180,15 @@ func _load_slot(slot: int) -> void:
 	TimeManager.set_state(data.get("time", {}))
 	var quest: Dictionary = data.get("quest", {})
 	TaskPanel.set_accepted(quest.get("accepted", []))
-	var recruit: Dictionary = data.get("recruit", {})
-	BtnRecruit.set_picked(str(recruit.get("picked", "")))
+	var npc_state: Dictionary = data.get("npc", {})
+	if npc_state.is_empty():
+		var legacy: Dictionary = data.get("recruit", {})
+		npc_state = {"picked": str(legacy.get("picked", ""))}
+	var npc_sys := get_node_or_null("/root/NpcSystem") as NpcSystem
+	if npc_sys != null:
+		npc_sys.set_state(npc_state)
+	else:
+		BtnRecruit.set_picked(str(npc_state.get("picked", "")))
 	get_tree().change_scene_to_file(MAIN_SCENE)
 
 

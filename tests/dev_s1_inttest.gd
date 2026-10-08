@@ -4,11 +4,14 @@ extends Node
 #   godot --headless --path . res://tests/dev_s1_inttest.tscn
 # 覆盖: 登录"开始新游戏" → Main (顶部资源条/等级 + 底部 6 功能按钮)
 #       → 3 占位按钮提示 "后续版本开放: X"
-#       → 招募面板 (Btn_Recruit 木板卡片三选一: 唐文轩/张睿/吴齐越 + recruit.picked 持久化)
+#       → 招募面板 (Btn_Recruit 木板卡片三选一: 唐文轩/张睿/吴齐越 + 一次性选人锁定)
+#         已选状态归 NpcSystem (config_id), BtnRecruit 为姓名门面 (is_picked/get_picked_id/被动查询)
 #       → 任务卷轴面板 (列表 任务1~10/详情/接受/放弃)
 #       → "进入" → ShelterInterior (一房一床 RoomPanel_1/BedLabel + 升级区)
 #       → 室内升级 30s 冷却 → BackButton 返回 Main
-#       → 设置弹层 game_menu 段 (存读档 3 槽/返回标题, 含 quest.accepted/recruit.picked round-trip)
+#       → 设置弹层 game_menu 段 (存读档 3 槽/返回标题, 含 quest.accepted +
+#         npc.picked(config_id)/recruit.picked(姓名镜像) round-trip)
+# 断言项数: 73 (原 70 → 73; 新增 3 = get_picked_id 1 + NpcSystem 被动 1 + 存档快照 npc.picked 1)
 # ============================================================
 
 var _failed := false
@@ -63,6 +66,12 @@ func _run() -> void:
 	var shelter := ShelterSystem.new()
 	shelter.name = "ShelterSystem"
 	get_tree().root.add_child.call_deferred(shelter)
+	await get_tree().process_frame
+
+	# 模拟 Boot 创建 NpcSystem (boot.gd npc=true 时挂 /root/NpcSystem, BtnRecruit 门面透传)
+	var npc_sys := NpcSystem.new()
+	npc_sys.name = "NpcSystem"
+	get_tree().root.add_child.call_deferred(npc_sys)
 	await get_tree().process_frame
 
 	# 挂上登录界面 (模拟 Boot → Login)
@@ -179,6 +188,9 @@ func _run() -> void:
 	card2.gui_input.emit(click)
 	await get_tree().process_frame
 	_check(BtnRecruit.is_picked("张睿"), "点整卡后 BtnRecruit.picked = 张睿")
+	_check(BtnRecruit.get_picked_id() == "npc.medic_01", "点整卡后 BtnRecruit.get_picked_id = npc.medic_01")
+	var npc_root := get_tree().root.get_node_or_null("NpcSystem") as NpcSystem
+	_check(npc_root != null and absf(npc_root.get_passive_bonus("casualty_reduce_percent") - 30.0) < 0.001, "NpcSystem 被动 casualty_reduce_percent = 30")
 	var card2_style := card2.get_theme_stylebox("panel") as StyleBoxFlat
 	_check(card2_style != null and card2_style.border_color.a > 0.5, "已选卡显示深棕描边")
 	var card1 := _find_by_name(recruit_panel, "NpcCard_1") as Control
@@ -341,6 +353,10 @@ func _run() -> void:
 	_check(menu_status != null and menu_status.text.begins_with("已读取"), "读取进度成功")
 	_check(TaskPanel.is_accepted("quest.placeholder_01"), "读档恢复 已接受 任务状态")
 	_check(BtnRecruit.is_picked("张睿"), "读档恢复 已招募 同伴状态 (张睿)")
+	# 存档快照双字段: npc.picked = config_id (主) + recruit.picked = 姓名镜像 (旧字段)
+	var save_data: Dictionary = SaveManager.load_game(3)
+	var npc_part: Dictionary = save_data.get("npc", {})
+	_check(str(npc_part.get("picked", "")) == "npc.medic_01", "存档快照 data.npc.picked = npc.medic_01 (config_id)")
 
 	if _failed:
 		printerr("INTTEST: FAILED")

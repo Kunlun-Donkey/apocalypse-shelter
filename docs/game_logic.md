@@ -176,7 +176,7 @@ Lv4~Lv12 在后续阶段以**追加 `[level.4]`~`[level.12]` 节**的方式加�
 
 | 现实时间 | 游戏内 | 玩家经历 |
 |---|---|---|
-| 0~10 分钟 | Day 1 清晨 | 核心绑定 VO, 四选一同伴, 建造启动 |
+| 0~10 分钟 | Day 1 清晨 | 核心绑定 VO, 三选一同伴, 建造启动 |
 | ~30 分钟 | Day 1 深夜~Day 2 | Lv2 加固木屋 (第 1 次视觉变化), 农场/回收站, 城郊解锁 |
 | ~60~75 分钟 | Day 2~3 | 昼夜已轮转 2 轮, 搜刮循环成型, 钢墙推进 |
 | ~100~120 分钟 | Day 4~5 | Lv3 修补营地 (第 2 次视觉变化), survivor 解锁, 城市废墟入口 —— "故事刚开始"钩子 |
@@ -343,7 +343,7 @@ fuel/medicine/electronics/rare_alloy 的 CONF 文件可在第 2 阶段加入 reg
 ### A9. 人口与同伴
 
 - `population_cap` = 人口上限 (等级表 A3), 人口消耗 S4 起 (本文 A9.1/M 相关设计)
-- Lv1 解锁 npc: **开局四选一同伴** (战斗/资源/陪伴/管家 各一, starter_npcs), 可派出干活
+- Lv1 解锁 npc: **开局三选一同伴** (`shelter.conf starter_npcs`, 见 A9.3), 可派出干活
 - Lv3 解锁 survivor (幸存者招募上岗)
 
 #### A9.1 幸存者体系 (survivor, 第 2 阶段) (原 SPEC I1)
@@ -383,7 +383,10 @@ npcs/merchant_01.conf
 新增 NPC = 新增 `npcs/xxx.conf` + registry 登记。
 (注意 id 错开: `npc.engineer_01` 已被开局同伴吴齐越占用, 到访机械师用 `npc.mechanic_01`)
 
-#### A9.3 同伴类型体系 (开局三选一, [passive] 扩展) (原 SPEC I3)
+> 注: npc 系统已**提前开启招募部分** (三选一入队/被动查询, 见 A9.3);
+> 本节的到访 NPC / 交易 / 对话等功能仍属 Dev-S4 未做。
+
+#### A9.3 同伴类型体系 (开局三选一, [passive] 扩展) (原 SPEC I3) — **已开启 (招募提前实施)**
 
 用户定稿 2026-10: 开局第一位同伴从 3 名候选中**三选一** (`shelter.conf starter_npcs`,
 玩家在招募面板**点整卡选定**, 见 B4.2), 类型决定被动/主动技能; 其余可在游戏过程中招募
@@ -396,8 +399,24 @@ npcs/merchant_01.conf
 | `npc.engineer_01` | 吴齐越 (工程师) | `engineer` | 5 / 5 / 10 | 【城防强化】提升据点城防的攻击威力 | 【机械守卫】召唤一台具备攻击力的机器人协助战斗 |
 
 - 三人熟悉度均 35; 属性值上限 10 (展示为属性条 `TextureProgressBar` max=10, 见 B4.2)
-- 数值/文案唯一数据源: CONF `npcs/*.conf` + `src/ui/btn_recruit.gd` 的 `NPC_DATA` 字典 (S1 UI 层, S2 起迁 CONF)
+- 数据源分工: CONF `npcs/*.conf` = **系统数据源** (NpcSystem 读); `src/ui/btn_recruit.gd`
+  的 `NPC_DATA` 字典 = **UI 展示源** (含 `id` 字段), autotest 有两者一致性断言防漂移
 - (旧"铁牛/老葛/苏晚/陈姨"四选一设定已作废, 被本表覆盖)
+
+实施现状 (**已开启**, 招募部分提前实施 — 原 Dev-S4 内容; 2026-10):
+
+- `system.conf npc = true` (依赖 npc = shelter 已满足), `src/systems/npc/npc_system.gd`
+  (class_name NpcSystem) 挂 /root/NpcSystem; **招募状态单一数据源, 存 config_id 不存姓名**
+  (姓名仅展示/旧档迁移, 遵守 ID 规范 `npc.medic_01` 等)
+- **三选一入队**: 点整卡选定 1 名 (`NpcSystem.recruit(id)`), **一次性锁定** (已选不可换),
+  系统层 + UI 层双重锁定; 本期 `team` 至多 1 人, 已有人再招直接拒绝
+- **被动技能数值查询 API**: `NpcSystem.get_passive_bonus(field)` 返回全队
+  `passive.bonuses` 求和 (如 `food_gain_bonus_percent=20` / `casualty_reduce_percent=30`),
+  供 S2+ 各系统消费; `get_active_skill_data(id)` **主动技能数据只读**, 本期不结算
+- 存档字段: 主字段 `npc: {picked: id, team: [id]}` + 镜像 `recruit: {picked: 姓名}`
+  (旧档兼容, 保留一个版本); 读档优先 `npc`, 空则回退 `recruit.picked` (姓名经
+  `set_state` 自动映射回 id)
+- **未做 (仍属 Dev-S4)**: 到访 NPC / 交易 / 对话 / 人口接管 / 主动技能结算
 
 ### A10. 野外资源 (搜刮节点) (原 SPEC J)
 
@@ -689,13 +708,13 @@ boot.tscn → login.tscn → main.tscn ⇄ shelter_interior.tscn
    (不放 UI, 等级变化一眼可见; 口径见下方"底图+庇护所图")
 3. **底部一排 6 功能按钮** (BottomBar, 等分, 节点名 = 测试契约) + 其上提示行 StatusLabel:
 
-| 按钮 | 节点名 | 功能 | 对应系统 (当前 system.conf 全 OFF) |
+| 按钮 | 节点名 | 功能 | 对应系统 (未开启者仅 UI 壳/占位) |
 |---|---|---|---|
 | 任务 | TaskButton | 游戏任务 (卷轴面板, 见 B4.1) | quest (UI 壳) |
 | 仓库 | WarehouseButton | 游戏仓库 | resource (+building 容量) |
 | 出城 | OutCityButton | 出城新地图 | map + location |
 | 探索 | ExploreButton | 探索挂机 (见 A12.1) | exploration + loot |
-| 招募 | Btn_Recruit | 招募 NPC (木板卡片面板, 见 B4.2) | npc + survivor (UI 壳) |
+| 招募 | Btn_Recruit | 招募 NPC (木板卡片面板, 见 B4.2) | npc (已开: 招募) + survivor (UI 壳) |
 | 进入 | EnterShelterButton | 进入庇护所 → shelter_interior.tscn | shelter (已开) |
 
 交互规则:
@@ -707,7 +726,7 @@ boot.tscn → login.tscn → main.tscn ⇄ shelter_interior.tscn
   缺文件回退 shelter_level1, 仍缺则隐藏 (`_shelter_overlay_texture()`)
   — 用户后续重新生成庇护所图覆盖同名文件即换图
 - **任务**: 点击弹出**任务卷轴面板 TaskPanel** (见 B4.1; quest 系统 OFF, UI 壳+占位内容)
-- **招募**: 点击开/关**招募面板** (木板卡片三选一, 见 B4.2; npc 系统 OFF, UI 壳+静态状态)
+- **招募**: 点击开/关**招募面板** (木板卡片三选一, 见 B4.2; npc 已开, 选定走 NpcSystem)
 - **3 占位按钮** (仓库/出城/探索): S1 纯占位零逻辑, 点击 →
   StatusLabel 显示 `后续版本开放: X`; 各系统开启后逐个接管 (禁用系统零初始化, 不建系统对象)
 - **进入**: change_scene → shelter_interior.tscn
@@ -751,14 +770,18 @@ boot.tscn → login.tscn → main.tscn ⇄ shelter_interior.tscn
   7. `PassiveTitle_N`/`PassiveDesc_N` 被动技能 + `ActiveTitle_N`/`ActiveDesc_N` 主动技能
 - **样式**: 全锚点容器布局 (CenterContainer/Margin/VBox, 不写死坐标); 文本深棕
   (BROWN_DARK #4A2F14 / BROWN_TEXT) 适配木板废土风
-- **NPC 数据**: `btn_recruit.gd` 的 `NPC_DATA` 字典 = 唯一数据源 (姓名/职业/熟悉度/属性/
-  背景/被动/主动/钻石路径), 改数值/换钻石/改文案只动字典; 三人数据见 A9.3
+- **NPC 数据**: `btn_recruit.gd` 的 `NPC_DATA` 字典 = UI 展示源 (姓名/职业/熟悉度/属性/
+  背景/被动/主动/钻石路径 + `id`), 改文案/换钻石只动字典; **CONF `npcs/*.conf` = 系统数据源**
+  (NpcSystem 读), autotest 有两者一致性断言防漂移; 三人数据见 A9.3
 - **整卡点选 (开局 3 选 1)**: 规格卡片版式 ①~⑥ 封闭无选择按钮 → **点整卡选定**;
-  已选卡加深棕描边 (StyleBoxFlat 3px 边框), 状态存 `BtnRecruit` 静态内存态
-  (`_picked` 存姓名, 跨场景保留; **不建 NpcSystem** — npc 开关 OFF 零初始化);
-  新游戏 `BtnRecruit.reset()`
-- **持久化**: 存档快照加 `recruit: {picked: "<NPC姓名>"}`, 保存/读档 (设置弹层 game_menu
-  + 登录读档弹层) 时写入/恢复
+  已选卡加深棕描边 (StyleBoxFlat 3px 边框); 点击走 `NpcSystem.recruit(id)` (存 config_id,
+  **一次性锁定**不可换, 本期 team≤1), 系统层 + UI 层双重锁定; `BtnRecruit` 静态 API
+  (get_picked/set_picked/...) = "姓名门面"委托 /root/NpcSystem (无系统时降级静态缓存);
+  新游戏 `NpcSystem.new_game()` + `BtnRecruit.reset()`
+- **持久化**: 存档快照主字段 `npc: {picked: config_id, team: [id]}` +
+  镜像 `recruit: {picked: "<NPC姓名>"}` (旧档兼容, 保留一个版本), 保存/读档 (设置弹层
+  game_menu + 登录读档弹层) 时写入/恢复; 读档优先 `npc`, 空则回退 `recruit.picked`
+  (姓名经 set_state 自动映射回 id)
 
 ### B5. shelter_interior.tscn (庇护所内部)
 
@@ -780,8 +803,8 @@ boot.tscn → login.tscn → main.tscn ⇄ shelter_interior.tscn
 - 登录/主界面两个入口; Esc 或关闭按钮退出; 重开游戏保留上次设置
 - **游戏菜单段** (`open(parent, game_menu=true)`, 仅主界面入口带):
   `SlotOption` 3 存档槽 + `SaveButton` 保存进度 + `LoadButton` 读取进度
-  (快照 `{shelter, time, quest, recruit}` → SaveManager, 读档 set_state + TaskPanel.set_accepted
-  + BtnRecruit.set_picked 后刷新) +
+  (快照 `{shelter, time, quest, npc, recruit}` → SaveManager, 读档 set_state + TaskPanel.set_accepted
+  + NpcSystem.set_state (recruit 镜像回退) 后刷新) +
   `MenuStatusLabel` 结果文本 + `BackToTitleButton` 返回标题 (→ login.tscn);
   登录入口 `open(parent)` 不带该段
 
@@ -832,7 +855,7 @@ boot.tscn → login.tscn → main.tscn ⇄ shelter_interior.tscn
 | 生产系统 | production | `production` | OFF | 幸存者岗位生产、生产线配方 |
 | 幸存者系统 | survivor | `survivor` | OFF | 招募、职业、属性、状态 |
 | 人口系统 | population | `population` | OFF | 人口上限、食物水消耗、出生死亡 |
-| NPC 系统 | npc | `npc` | OFF | NPC 刷新、功能、对话、招募 |
+| NPC 系统 | npc | `npc` | OFF | NPC 刷新、功能、对话、招募 (招募已提前实施, 见 A9.3) |
 | 探索系统 | exploration | `exploration` | OFF | 派队、负重、风险、搜刮结算 |
 | 地图系统 | map | `map` | OFF | 区域图、路径、解锁 |
 | 地点系统 | location | `location` | OFF | 可探索地点实例、刷新 |
@@ -861,7 +884,7 @@ boot.tscn → login.tscn → main.tscn ⇄ shelter_interior.tscn
 | 音频系统 | audio | `audio` | OFF | BGM/SFX/混音 |
 | 设置系统 | settings | `settings` | OFF | 图形/音量/辅助功能 |
 
-> 注: 此为系统设计全集; 各阶段实际开关以 configs/system.conf 为准 (Dev-S1 仅 shelter + settings 开启, 阶段划分见 AGENTS.md)。
+> 注: 此为系统设计全集; 各阶段实际开关以 configs/system.conf 为准 (Dev-S1 = shelter + settings + npc, npc 仅招募提前实施, 阶段划分见 AGENTS.md)。
 
 ### C3. 系统依赖图
 
@@ -967,17 +990,19 @@ production⇢ survivor                     (无人口=建筑自动生产)
 
 #### D1.4. 启用系统后的自动加载 (原 D4)
 
-开启新系统**不需要改核心代码**:
+开启新系统**不改核心循环**:
 
 ```text
 改 system.conf: survivor = true, population = true
 → 重启游戏
 → ConfigManager 校验依赖
 → 自动加载 configs/survivors/*.conf, configs/population/*
-→ SystemRegistry 自动实例化 SurvivorSystem / PopulationSystem
+→ 实例化 System 挂 /root (现状: boot.gd 按 ConfigManager.is_enabled() 手写接线,
+  如 ShelterSystem / NpcSystem; SystemRegistry 自动注册是目标态)
 ```
 
-前提: 该系统的 System 类已在注册表登记 (一次性)。新增系统 = 新增 1 个 System 类 + 注册 + 目录, 不触碰核心循环。
+现状: System 实例化是 **boot.gd 手写接线** (is_enabled() 判断后 new + 挂 /root),
+SystemRegistry 自动注册为**目标态**。新增系统 = 新增 1 个 System 类 + boot 接线一行 + 目录, 不触碰核心循环。
 
 #### D1.5. 实际文件 (原 D5)
 
@@ -1067,7 +1092,7 @@ rewards / loot / risk / time / visual / audio
 | shelter_levels | shelter/ | population_cap, building_slots, storage_bonus, production_bonus_percent, defense, income_*, unlocks_*, upgrade_cost_*, requirements_* |
 | building | buildings/ | category, max_level, unlock_shelter_level, size, worker_requirement, dependencies, level.N |
 | survivor | survivors/ | profession, rarity, stats, skills, work_pref |
-| npc | npcs/ | identity, spawn_region, spawn_condition, functions, recruit_allowed |
+| npc | npcs/ | identity, spawn_region, spawn_condition, functions, recruit_allowed, [passive]/[active] 技能块 |
 | location | locations/ | region, risk, search_time, loot_table, events, respawn |
 | loot_table | loot/ | entries: item/resource + weight + range |
 | enemy | enemies/ | hp, atk, def, speed, ai, drop_table |
@@ -1078,6 +1103,15 @@ rewards / loot / risk / time / visual / audio
 | weather | weather/ | duration, modifiers |
 | disaster | disaster/ | warning_time, impact, rewards |
 | exploration | exploration/ | cost_time, risk_rules, carry_weight |
+
+**CONF 解析约定** (通用, ConfigManager):
+
+- 小 CONF 的 `[passive]`/`[active]` 节内除 `npc_type`/`skill` 外的**数值键通用扫描**收入
+  bonuses/values 字典 (`[passive]` 其余键 → `passive.bonuses: {field: float}`,
+  `[active]` 其余键 → `active.values`), 未来加数值字段**零代码** (如
+  `casualty_reduce_percent = 30` 直接可查)
+- `starter_npcs` (shelter.conf) **强制校验**: 引用的 NPC 必须存在且 `recruit_allowed = true`,
+  否则 ConfigError 终止启动 (开局三选一候选不得缺位/禁招)
 
 #### D2.8. 版本与迁移 (原 E8)
 
@@ -1177,6 +1211,10 @@ exploration ──id_ref──▶ map / location / survivor
 示例: 第一阶段 `shelter_levels.conf` 中 `unlocks_locations = [location.suburb_edge]`,
 location 系统为 OFF → dormant ref 告警; 第二阶段 `location = true` 时,
 若 `locations/` 下仍无 `location.suburb_edge` → ConfigError 终止。
+
+现行实例: `npcs/*.conf` 的 `spawn_region = [location.*]` 引用 location 系统,
+而 `location = false` → ConfigManager **push_warning 休眠继续, 不终止** (dormant ref),
+待 location 系统开启时在其加载期强制校验该引用 (与"开启时强制校验"对应)。
 
 ### E3. GameState (存档) 与 CONF 的边界 (原 P3)
 

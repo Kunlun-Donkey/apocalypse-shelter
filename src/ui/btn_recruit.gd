@@ -5,8 +5,11 @@ extends Button
 # 挂载: 作为主界面 BottomBar 的 "招募" 按钮 (节点名 Btn_Recruit)
 # 交互: 点击按钮 开/关 面板 (默认隐藏); 点击全屏遮罩关闭; 点整卡选定 NPC (3 选 1)
 # 素材: res://assets/npc_recruit/ (board.png 木板 / diamond_purple.png 紫钻 / bar_*.png 属性条, 占位可覆盖)
-# NPC_DATA 字典 = 唯一数据源: 改数值/换钻石/改文案只动字典
-# 已选状态: 静态内存态 (跨场景) + 存档 recruit.picked 字段 (login/settings 接线)
+# NPC_DATA 字典 = 唯一数据源: 改数值/换钻石/改文案只动字典 (id 对应 configs/npcs/*.conf)
+# 已选状态: 归 NpcSystem (单一数据源, 存 config_id); 本层为"姓名门面"兼容旧接口
+#   - 有 /root/NpcSystem: 静态函数透传 NpcSystem (recruit/set_state/new_game)
+#   - 无 NpcSystem (navtest/settest 等): 降级用静态 _picked 姓名缓存
+# 存档字段: npc.picked=config_id (主) + recruit.picked=姓名镜像 (兼容)
 # ============================================================
 
 const BOARD_TEXTURE := "res://assets/npc_recruit/board.png"
@@ -20,6 +23,7 @@ const BROWN_TEXT := Color(0.32, 0.22, 0.12)
 # 三名候选同伴 (顺序即卡片顺序; attrs 最多 3 条, 数值上限 ATTR_MAX=10)
 const NPC_DATA := [
 	{
+		"id": "npc.veteran_01",
 		"name": "唐文轩",
 		"title": "老兵",
 		"familiarity": 35,
@@ -32,6 +36,7 @@ const NPC_DATA := [
 		"diamond": "res://assets/npc_recruit/diamond_purple.png",
 	},
 	{
+		"id": "npc.medic_01",
 		"name": "张睿",
 		"title": "医师",
 		"familiarity": 35,
@@ -44,6 +49,7 @@ const NPC_DATA := [
 		"diamond": "res://assets/npc_recruit/diamond_purple.png",
 	},
 	{
+		"id": "npc.engineer_01",
 		"name": "吴齐越",
 		"title": "工程师",
 		"familiarity": 35,
@@ -57,28 +63,57 @@ const NPC_DATA := [
 	},
 ]
 
-# 已选同伴 (存 name; 静态 = 跨场景保留, npc 系统未开启仅 UI 层状态)
+# 已选同伴降级缓存 (存中文姓名; 无 NpcSystem 时用, 静态 = 跨场景保留)
 static var _picked := ""
 
 
+# 取 NpcSystem (boot.gd 实例化于 /root/NpcSystem); 拿不到返回 null (navtest/settest 无此系统)
+static func _sys() -> NpcSystem:
+	var ml := Engine.get_main_loop()
+	if ml == null:
+		return null
+	var sys := (ml as SceneTree).root.get_node_or_null("NpcSystem") as NpcSystem
+	return sys
+
+
 static func get_picked() -> String:
+	var sys := _sys()
+	if sys != null:
+		return sys.get_picked_name()
 	return _picked
 
 
 static func set_picked(npc_name: String) -> void:
+	var sys := _sys()
+	if sys != null:
+		sys.set_state({"picked": npc_name})
+		return
 	_picked = npc_name
 
 
 static func reset() -> void:
+	var sys := _sys()
+	if sys != null:
+		sys.new_game()
 	_picked = ""
 
 
 static func is_picked(npc_name: String) -> bool:
-	return _picked == npc_name and npc_name != ""
+	return get_picked_name() == npc_name and npc_name != ""
 
 
 static func get_picked_name() -> String:
+	var sys := _sys()
+	if sys != null:
+		return sys.get_picked_name()
 	return _picked
+
+
+static func get_picked_id() -> String:
+	var sys := _sys()
+	if sys != null:
+		return sys.get_picked_id()
+	return ""
 
 
 # ---------------- 面板 ----------------
@@ -112,14 +147,21 @@ func _on_mask_input(event: InputEvent) -> void:
 
 func _on_card_input(event: InputEvent, index: int) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		if _picked == "":
-			set_picked(str(NPC_DATA[index].get("name", "")))
-			_refresh_picked()
+		# 一次性锁定: 已选不可换
+		if get_picked_name() == "":
+			var sys := _sys()
+			if sys != null:
+				if sys.recruit(str(NPC_DATA[index].get("id", ""))):
+					_refresh_picked()
+			else:
+				set_picked(str(NPC_DATA[index].get("name", "")))
+				_refresh_picked()
 
 
 func _refresh_picked() -> void:
+	var picked_name := get_picked_name()
 	for i in _card_styles.size():
-		var picked := is_picked(str(NPC_DATA[i].get("name", "")))
+		var picked := picked_name == str(NPC_DATA[i].get("name", "")) and picked_name != ""
 		_card_styles[i].border_color = BROWN_DARK if picked else Color(0, 0, 0, 0)
 
 

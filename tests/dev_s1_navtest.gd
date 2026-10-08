@@ -49,6 +49,12 @@ func _run() -> void:
 	get_tree().root.add_child.call_deferred(shelter)
 	await get_tree().process_frame
 
+	# 模拟 Boot 创建 NpcSystem (boot.gd npc=true 时挂 /root/NpcSystem)
+	var npc_sys := NpcSystem.new()
+	npc_sys.name = "NpcSystem"
+	get_tree().root.add_child.call_deferred(npc_sys)
+	await get_tree().process_frame
+
 	# 挂上登录界面 (模拟 Boot → Login)
 	var login := (load("res://src/scenes/login.tscn") as PackedScene).instantiate()
 	get_tree().root.add_child(login)

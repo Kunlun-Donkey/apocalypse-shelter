@@ -208,10 +208,13 @@ func _selected_menu_slot() -> int:
 func _on_save_pressed() -> void:
 	var slot := _selected_menu_slot()
 	var shelter := get_node("/root/ShelterSystem") as ShelterSystem
+	var npc_sys := get_node_or_null("/root/NpcSystem") as NpcSystem
+	var npc_state: Dictionary = npc_sys.get_state() if npc_sys != null else {}
 	var data := {
 		"shelter": shelter.get_state(),
 		"time": TimeManager.get_state(),
 		"quest": {"accepted": TaskPanel.get_accepted()},
+		"npc": npc_state,
 		"recruit": {"picked": BtnRecruit.get_picked()},
 	}
 	var err := SaveManager.save_game(slot, data)
@@ -229,8 +232,15 @@ func _on_load_pressed() -> void:
 	TimeManager.set_state(data.get("time", {}))
 	var quest: Dictionary = data.get("quest", {})
 	TaskPanel.set_accepted(quest.get("accepted", []))
-	var recruit: Dictionary = data.get("recruit", {})
-	BtnRecruit.set_picked(str(recruit.get("picked", "")))
+	var npc_state: Dictionary = data.get("npc", {})
+	if npc_state.is_empty():
+		var legacy: Dictionary = data.get("recruit", {})
+		npc_state = {"picked": str(legacy.get("picked", ""))}
+	var npc_sys := get_node_or_null("/root/NpcSystem") as NpcSystem
+	if npc_sys != null:
+		npc_sys.set_state(npc_state)
+	else:
+		BtnRecruit.set_picked(str(npc_state.get("picked", "")))
 	_menu_status.text = "已读取存档 %d" % slot
 
 
