@@ -41,13 +41,6 @@ func _build_ui() -> void:
 	# 根节点铺满窗口 (tscn 保持最小写法, 锚点在代码里设)
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 
-	var bg := TextureRect.new()
-	bg.texture = load(_interior_bg_path())
-	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(bg)
-
 	var root_box := VBoxContainer.new()
 	root_box.add_theme_constant_override("separation", 24)
 	root_box.set_anchors_preset(Control.PRESET_FULL_RECT)
