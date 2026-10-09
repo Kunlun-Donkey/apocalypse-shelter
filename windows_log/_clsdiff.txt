@@ -1,0 +1,42 @@
+﻿== declared class_name (36) ==
+AnalysisTools  <=  H:\godot_game\apocalypse-shelter\addons\godot_mcp\tools\analysis_tools.gd
+AnimationTools  <=  H:\godot_game\apocalypse-shelter\addons\godot_mcp\tools\animation_tools.gd
+AnimationTreeTools  <=  H:\godot_game\apocalypse-shelter\addons\godot_mcp\tools\animation_tree_tools.gd
+AssetTools  <=  H:\godot_game\apocalypse-shelter\addons\godot_mcp\tools\asset_tools.gd
+AudioTools  <=  H:\godot_game\apocalypse-shelter\addons\godot_mcp\tools\audio_tools.gd
+BatchTools  <=  H:\godot_game\apocalypse-shelter\addons\godot_mcp\tools\batch_tools.gd
+BtnRecruit  <=  H:\godot_game\apocalypse-shelter\src\ui\btn_recruit.gd
+ButtonSkin  <=  H:\godot_game\apocalypse-shelter\src\ui\button_skin.gd
+FileTools  <=  H:\godot_game\apocalypse-shelter\addons\godot_mcp\tools\file_tools.gd
+McpActivityLog  <=  H:\godot_game\apocalypse-shelter\addons\godot_mcp\utils\activity_log.gd
+MCPClient  <=  H:\godot_game\apocalypse-shelter\addons\godot_mcp\mcp_client.gd
+MCPPaths  <=  H:\godot_game\apocalypse-shelter\addons\godot_mcp\utils\paths.gd
+NavigationTools  <=  H:\godot_game\apocalypse-shelter\addons\godot_mcp\tools\navigation_tools.gd
+NetcodeTools  <=  H:\godot_game\apocalypse-shelter\addons\godot_mcp\tools\netcode_tools.gd
+NpcDetailPanel  <=  H:\godot_game\apocalypse-shelter\src\ui\npc_detail_panel.gd
+NpcSystem  <=  H:\godot_game\apocalypse-shelter\src\systems\npc\npc_system.gd
+ParticleTools  <=  H:\godot_game\apocalypse-shelter\addons\godot_mcp\tools\particle_tools.gd
+PathGuard  <=  H:\godot_game\apocalypse-shelter\addons\godot_mcp\utils\path_guard.gd
+PhysicsTools  <=  H:\godot_game\apocalypse-shelter\addons\godot_mcp\tools\physics_tools.gd
+ProjectTools  <=  H:\godot_game\apocalypse-shelter\addons\godot_mcp\tools\project_tools.gd
+Scene3DTools  <=  H:\godot_game\apocalypse-shelter\addons\godot_mcp\tools\scene3d_tools.gd
+SceneToolBase  <=  H:\godot_game\apocalypse-shelter\addons\godot_mcp\tools\scene_tool_base.gd
+SceneTools  <=  H:\godot_game\apocalypse-shelter\addons\godot_mcp\tools\scene_tools.gd
+ScriptTools  <=  H:\godot_game\apocalypse-shelter\addons\godot_mcp\tools\script_tools.gd
+SettingsOverlay  <=  H:\godot_game\apocalypse-shelter\src\ui\settings_overlay.gd
+ShaderTools  <=  H:\godot_game\apocalypse-shelter\addons\godot_mcp\tools\shader_tools.gd
+ShelterStatusPanel  <=  H:\godot_game\apocalypse-shelter\src\ui\shelter_status_panel.gd
+ShelterSystem  <=  H:\godot_game\apocalypse-shelter\src\systems\shelter\shelter_system.gd
+TaskPanel  <=  H:\godot_game\apocalypse-shelter\src\ui\task_panel.gd
+TestingTools  <=  H:\godot_game\apocalypse-shelter\addons\godot_mcp\tools\testing_tools.gd
+ThemeTools  <=  H:\godot_game\apocalypse-shelter\addons\godot_mcp\tools\theme_tools.gd
+TileMapTools  <=  H:\godot_game\apocalypse-shelter\addons\godot_mcp\tools\tilemap_tools.gd
+ToolExecutor  <=  H:\godot_game\apocalypse-shelter\addons\godot_mcp\tool_executor.gd
+VariantCodec  <=  H:\godot_game\apocalypse-shelter\addons\godot_mcp\utils\variant_codec.gd
+VisualizerTools  <=  H:\godot_game\apocalypse-shelter\addons\godot_mcp\tools\visualizer_tools.gd
+WireText  <=  H:\godot_game\apocalypse-shelter\addons\godot_mcp\utils\wire_text.gd
+== registered in cache (0) ==
+== declared but NOT registered ==
+AnalysisTools, AnimationTools, AnimationTreeTools, AssetTools, AudioTools, BatchTools, BtnRecruit, ButtonSkin, FileTools, McpActivityLog, MCPClient, MCPPaths, NavigationTools, NetcodeTools, NpcDetailPanel, NpcSystem, ParticleTools, PathGuard, PhysicsTools, ProjectTools, Scene3DTools, SceneToolBase, SceneTools, ScriptTools, SettingsOverlay, ShaderTools, ShelterStatusPanel, ShelterSystem, TaskPanel, TestingTools, ThemeTools, TileMapTools, ToolExecutor, VariantCodec, VisualizerTools, WireText
+== registered but NOT declared ==
+

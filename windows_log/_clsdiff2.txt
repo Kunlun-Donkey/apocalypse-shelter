@@ -1,0 +1,8 @@
+﻿DECLARED=36
+AnalysisTools, AnimationTools, AnimationTreeTools, AssetTools, AudioTools, BatchTools, BtnRecruit, ButtonSkin, FileTools, McpActivityLog, MCPClient, MCPPaths, NavigationTools, NetcodeTools, NpcDetailPanel, NpcSystem, ParticleTools, PathGuard, PhysicsTools, ProjectTools, Scene3DTools, SceneToolBase, SceneTools, ScriptTools, SettingsOverlay, ShaderTools, ShelterStatusPanel, ShelterSystem, TaskPanel, TestingTools, ThemeTools, TileMapTools, ToolExecutor, VariantCodec, VisualizerTools, WireText
+REGISTERED=36
+AnalysisTools, AnimationTools, AnimationTreeTools, AssetTools, AudioTools, BatchTools, BtnRecruit, ButtonSkin, FileTools, McpActivityLog, MCPClient, MCPPaths, NavigationTools, NetcodeTools, NpcDetailPanel, NpcSystem, ParticleTools, PathGuard, PhysicsTools, ProjectTools, Scene3DTools, SceneToolBase, SceneTools, ScriptTools, SettingsOverlay, ShaderTools, ShelterStatusPanel, ShelterSystem, TaskPanel, TestingTools, ThemeTools, TileMapTools, ToolExecutor, VariantCodec, VisualizerTools, WireText
+== declared but NOT registered ==
+
+== registered but NOT declared ==
+

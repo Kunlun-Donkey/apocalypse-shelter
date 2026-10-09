@@ -1,0 +1,3 @@
+﻿CACHE_ENTRIES=36
+BAD_PATHS=0
+== import log: class registration lines ==
