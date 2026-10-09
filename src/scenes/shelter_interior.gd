@@ -78,6 +78,7 @@ func _build_ui() -> void:
 	_stage = Control.new()
 	_stage.name = "InteriorStage"
 	_stage.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_stage.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	mid_box.add_child(_stage)
 	_build_tile_grid()
 
@@ -160,9 +161,8 @@ func _build_tile_grid() -> void:
 	grid.build(g.x, g.y, stage_str)
 	var needed: Vector2 = grid.custom_minimum_size
 	grid.position = Vector2.ZERO
-	grid.size = needed
+	grid.custom_minimum_size = needed
 	_stage.custom_minimum_size = needed
-	_stage.size = needed
 	_tile_grid = grid
 	if g.y > 0:
 		_cell_h = needed.y / float(g.y)
