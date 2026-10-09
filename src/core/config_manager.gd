@@ -247,6 +247,30 @@ static func parse_range(raw: String) -> Dictionary:
 	}
 
 
+# grid: "[4, 3]" -> Vector2i(4, 3); 空值(键缺失) -> fallback (缺省 4x3)
+# 非空但不是两个整数, 或 列/行 < 3 (rows 允许 >3 多层) → _fail 配置错误,
+# 返回 (-1, -1) 哨兵 (调用方判 x < 0 后返回空字典中断); 因要调 _fail 故非 static
+func _parse_grid(raw: String, fallback: Vector2i) -> Vector2i:
+	var text: String = raw.strip_edges()
+	if text.is_empty():
+		return fallback
+	var items: Array = parse_list(text)
+	if items.size() != 2:
+		_fail("ConfigError: interior_grid 需要 [列, 行] 两个整数, got: %s" % raw)
+		return Vector2i(-1, -1)
+	var col_text: String = str(items[0]).strip_edges()
+	var row_text: String = str(items[1]).strip_edges()
+	if not col_text.is_valid_int() or not row_text.is_valid_int():
+		_fail("ConfigError: interior_grid 需要 [列, 行] 两个整数, got: %s" % raw)
+		return Vector2i(-1, -1)
+	var cols: int = col_text.to_int()
+	var rows: int = row_text.to_int()
+	if cols < 3 or rows < 3:
+		_fail("ConfigError: interior_grid 列/行均须 >= 3, got: %s" % raw)
+		return Vector2i(-1, -1)
+	return Vector2i(cols, rows)
+
+
 static func _parse_int(raw: String, default_value: int) -> int:
 	var text := raw.strip_edges()
 	if text.is_valid_int():
@@ -358,6 +382,8 @@ func _load_shelter_conf() -> int:
 	# 视觉阶段 (字符串列表, 原样保留; 场景表现 S1 只用 lv1.png 背景)
 	var visual := _section(SHELTER_PATH, "visual")
 	_shelter_base["visual_stages"] = parse_list(visual.get("visual_stages", "[]"))
+	# 室内瓦片单元格像素尺寸 (瓦片化室内): 0 = 自动取 tile_floor.png 实际尺寸
+	_shelter_base["tile_cell_size"] = _parse_int(visual.get("tile_cell_size", ""), 0)
 
 	return _load_shelter_levels("res://configs/" + levels_file, mvp_max_level)
 
@@ -431,10 +457,15 @@ func _parse_level(path: String, section: String) -> Dictionary:
 		if not s.has(required):
 			_error = "MissingData: %s [%s] missing %s" % [path, section, required]
 			return {}
+	# 室内瓦片网格 (可选键): "[列, 行]", 缺省 4x3; 非法/越界 → 配置错误
+	var interior_grid: Vector2i = _parse_grid(str(s.get("interior_grid", "")), Vector2i(4, 3))
+	if interior_grid.x < 0:
+		return {}
 	return {
 		"name": level_name,
 		"description": s.get("description", ""),
 		"visual_stage": s.get("visual_stage", ""),
+		"interior_grid": interior_grid,
 		"population_cap": _parse_int(s.get("population_cap", ""), -1),
 		"building_slots": _parse_int(s.get("building_slots", ""), -1),
 		"storage_bonus": _parse_int(s.get("storage_bonus", ""), 0),

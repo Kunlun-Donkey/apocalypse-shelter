@@ -5,7 +5,7 @@ extends Node
 # 覆盖 AGENTS.md §2.5: 配置加载 / Lv1→Lv3 升级链 / 满级禁用 / 存读档一致 /
 # NpcSystem 招募三选一 / 被动查询 / 存读档恢复 / 旧档姓名迁移 / NPC_DATA↔CONF 防漂移 /
 # OFF 系统零初始化 (resource/quest/trade)。CONFIG ERROR 路径由外部脚本改坏配置验证。
-# 断言项数: 69 (含庇护所属性/生命状态 18 + 同伴百分比加成 10 + NpcSystem 21 + 零初始化 5)
+# 断言项数: 72 (含庇护所属性/生命状态 18 + 同伴百分比加成 10 + 瓦片 CONF 3 + NpcSystem 21 + 零初始化 5)
 # ============================================================
 
 var _failed := false
@@ -161,6 +161,21 @@ func _run() -> void:
 		int(lv3.get("hp_max", -1)) == 350 and int(lv3.get("attack", -1)) == 10
 		and int(lv3.get("defense", -1)) == 50 and int(lv3.get("recovery", -1)) == 6,
 		"Lv3 属性 = hp_max 350 / attack 10 / defense 50 / recovery 6"
+	)
+
+	# 室内瓦片网格 CONF 白名单锁定 (防 config_manager 静默丢键)
+	_check(
+		lv1.get("interior_grid", Vector2i(-1, -1)) == Vector2i(4, 3),
+		"Lv1 interior_grid = (4, 3)"
+	)
+	_check(
+		lv2.get("interior_grid", Vector2i(-1, -1)) == Vector2i(5, 3)
+		and lv3.get("interior_grid", Vector2i(-1, -1)) == Vector2i(6, 3),
+		"Lv2/3 interior_grid = (5, 3) / (6, 3)"
+	)
+	_check(
+		int(ConfigManager.get_shelter_base().get("tile_cell_size", -1)) == 0,
+		"shelter_base tile_cell_size = 0"
 	)
 
 	# 攻击/防御 = 基础 + 建筑 + 同伴 (建筑加成本期恒 0, S2/S3 接入)

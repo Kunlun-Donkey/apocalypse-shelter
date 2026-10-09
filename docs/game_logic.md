@@ -139,6 +139,7 @@ V1 主线 Lv12+结局 ≈ 35~45h, 全成就 60h+; Lv3 须 ~100 分钟现实可�
 ```text
 level.N:
   name / description / visual_stage
+  interior_grid [cols, rows]                        # 可选, 室内瓦片网格尺寸, 缺省 [4,3] (S1 固定 3 行只横扩)
   population_cap / building_slots / storage_bonus / defense
   hp_max / attack / recovery                          # 必填 int (生命上限/攻击/恢复)
   production_bonus_percent
@@ -859,28 +860,40 @@ boot.tscn → login.tscn → main.tscn ⇄ shelter_interior.tscn
 
 ### B5. shelter_interior.tscn (庇护所内部)
 
-- 背景 `blank_interior_1920x1080.png`; 全代码 UI 壳 (tscn 只放根节点)
+- 全代码 UI 壳 (tscn 只放根节点)
 - **视角定稿: 2.5D 剖面图** (用户确认 2026-10-08): 略俯视 (~20-30°) 的娃娃屋切面,
-  可见房间地板纵深、家具立体感、同伴活动; 成长以剖面扩张表现 (格子解锁/家具变多),
-  **不用纯正视立面图**; 后续房间玩法恢复 2×3 格时按此视角铺场景图 (占位图同名覆盖)
-  — **侧剖面硬规则** (网格两轴只横纵扩展 / 同机位同格尺寸出图 / 锁镜头 / 背景烘焙+精灵+UI 分层 /
+  可见房间地板纵深、家具立体感、同伴活动; 成长以剖面扩张表现 (网格横扩/家具变多),
+  **不用纯正视立面图**
+  — **侧剖面硬规则** (网格两轴只横纵扩展 / 同机位同格尺寸出图 / 锁镜头 / 瓦片层+精灵+UI 分层 /
   否决等距斜 45°) 定稿于 AGENTS.md §13.0, 素材与布局一律遵守
-- **一房一床极简** (用户定稿 2026-10, 其余房间/家具后续版本):
-  - `RoomPanel_1` 卧室: 300×220 占位图 `blank_room_panel_512x512.png` + 房名 + `BedLabel`="床 ×1" + "已启用"
-  - `CompanionSlot` 同伴名牌 (挂卧室 RoomPanel_1): 显示已入队 1 名 NPC "同伴: 姓名 · 职业",
+- **瓦片网格拼贴** (2026-10 定稿, 勿回退; 覆盖旧"整图背景 + 一房一床 RoomPanel_1/BedLabel"):
+  - 底图 = `TileGrid` (GridContainer) 瓦片方格网格, 1 格 = 1 张瓦片图
+    (`assets/shelter/tiles/<stage>/tile_<component>.png`, 见 B7); **家具 (床等) 不是瓦片**,
+    属未来可动精灵层; RoomPanel_1/BedLabel 已删
+  - 节点契约 (测试断言): 单元格 = TextureRect 命名 `TileCell_<col>_<row>`,
+    meta `tile_component` / `grid_col` / `grid_row`; TileGrid 根 meta `grid_cols` / `grid_rows`
+  - 行语义: row 0 = 天花板 / row rows-1 = 地板 / 中间 = 墙行 (S1 即 row 1)
+  - 拼贴布局规则 (**代码生成, S1 不进 CONF**):
+    - row 0 → tile_ceiling; row rows-1 → tile_floor
+    - 墙行: `c==0` → tile_wall_side_left; `c==cols-1` → tile_wall_side_right;
+      `c==cols/2` → tile_wall_door; `c%2==1` → tile_wall_window; 其余 → tile_wall
+  - 网格尺寸进 CONF: `shelter_levels.conf [level.N] interior_grid = [cols,rows]`
+    (Lv1=[4,3] / Lv2=[5,3] / Lv3=[6,3], 缺省 [4,3], 见 A3.1);
+    **S1 固定 3 行只横扩**, rows>3 多层 + tile_stair/tile_base 留 S2+
+  - 风格变体按 `visual_stage` 5 套出图: cabin / camp / outpost / fortress / stronghold
+- **浮层 UI** (盖在瓦片网格上, 保留):
+  - `CompanionSlot` 同伴名牌: 显示已入队 1 名 NPC "同伴: 姓名 · 职业",
     点击弹出 **NpcDetailPanel 详情面板** (`src/ui/npc_detail_panel.gd`: 钻石/姓名/职业/熟悉度/
     三条属性条/背景描述/被动/主动技能, 全 Detail 前缀节点名, Mask 点击或 Esc 关闭);
     未招募显示 "同伴: 空 (未招募)" 且灰化不可点
   - 范围只看已入队 1 名 (三选一锁定, 落选者不再展示); 数据源=BtnRecruit.NPC_DATA
     (纯 UI 层展示, 不读 CONF)
-  - 原 2×3 五房 (卧室/储藏室/厨房/工作台/大门) 与 RoomSummary/`building_slots` 解锁展示**已移除**,
-    待后续房间玩法版本恢复扩展
-- **升级区** (自 main 迁入; 升级唯一入口): `UpgradeButton` (升级庇护所) +
-  `CooldownLabel` (冷却倒计时) + `UpgradeStatusLabel` (状态文本) + LevelLabel
-  - 点击 → `start_upgrade()` 成功则按钮禁用显示"升级中..." + 剩余秒数 (每帧刷新)
-    → 冷却完成信号 → "升级完成: LvN 名称"; 满级或冷却中按钮禁用
-  - S1 升级 = 30s 现实冷却 (ShelterSystem.TEMP_UPGRADE_COOLDOWN_REAL_SECONDS), S2 引入资源后废弃
-- BackButton → 返回主界面
+  - **升级区** (自 main 迁入; 升级唯一入口): `UpgradeButton` (升级庇护所) +
+    `CooldownLabel` (冷却倒计时) + `UpgradeStatusLabel` (状态文本) + LevelLabel
+    - 点击 → `start_upgrade()` 成功则按钮禁用显示"升级中..." + 剩余秒数 (每帧刷新)
+      → 冷却完成信号 → "升级完成: LvN 名称"; 满级或冷却中按钮禁用
+    - S1 升级 = 30s 现实冷却 (ShelterSystem.TEMP_UPGRADE_COOLDOWN_REAL_SECONDS), S2 引入资源后废弃
+  - BackButton → 返回主界面
 
 ### B6. 设置面板 (SettingsOverlay, 弹层)
 
@@ -897,8 +910,32 @@ boot.tscn → login.tscn → main.tscn ⇄ shelter_interior.tscn
 
 - **占位图 (用户定稿)**: 缺图处放 `blank_XX_宽x高.png` 纯色占位 (背景类 1920×1080,
   面板类 512×512), 用户后续**直接覆盖同名文件**填实际 UI, 代码零改动。
-  现有: blank_login / blank_lv1~lv3 / blank_interior _1920x1080.png + blank_room_panel_512x512.png
-  + blank_scroll_1400x900.png (任务卷轴, 发黄纯色)
+  现有: blank_login / blank_lv1~lv3 / blank_interior _1920x1080.png (室内旧整图背景, 已被瓦片
+  网格取代, 文件仍在) + blank_scroll_1400x900.png (任务卷轴, 发黄纯色)
+- **室内瓦片素材** (2026-10, 用户 AI 出图按名丢入, 覆盖即换图):
+  - 路径规范: `assets/shelter/tiles/<stage>/tile_<component>.png`
+    (stage = visual_stage 五套 cabin/camp/outpost/fortress/stronghold;
+    1 格 = 1 张图, 同机位同格尺寸, 见 AGENTS.md §13.0)
+  - 组件清单 (11 件, S1 做 8 件):
+
+    | 文件名 | 中文 | S1 | 用途 |
+    |---|---|---|---|
+    | tile_floor.png | 地板 | 必做 | 底行; 地板透视面+前沿厚度+地面接触 (厚度并入本件) |
+    | tile_wall.png | 素墙 | 必做 | 中行默认墙; 自带踢脚线/顶口收边 (接缝自烘, 不设转角件) |
+    | tile_ceiling.png | 天花板 | 必做 | 顶行; 带梁/屋顶暗示 |
+    | tile_wall_window.png | 窗墙 | 必做 | 中行窗 |
+    | tile_wall_door.png | 门墙 | 必做 | 中行门 (带门扇) |
+    | tile_wall_side_left.png | 左端墙 | 必做 | 墙行最左列: 剖切端头 |
+    | tile_wall_side_right.png | 右端墙 | 必做 | 墙行最右列 (左端镜像) |
+    | tile_wall_doorway.png | 门洞墙 | 选做 | 无门扇开口; 缺→回退 door |
+    | tile_base.png | 地基 | 后期 | 多层后底行接地变体; 缺→floor |
+    | tile_stair.png | 楼梯 | 后期 | 多层连接; 缺→wall |
+    | tile_column.png | 立柱 | 后期 | 承重柱/装饰; 缺→wall |
+
+  - **兜底链** (缺图不崩溃, 逐级回退): `<stage>/tile_X` → `cabin/tile_X` → 降级映射
+    (window/door/doorway/stair/column/side_* → wall, base → floor, ceiling → wall)
+    → `assets/shelter/tiles/blank_tile_256x256.png` (纯色占位, 覆盖即换图) → 代码生成纯色纹理
+  - 单元格尺寸: `shelter.conf [visual] tile_cell_size = 0` (0 = 自动取 tile_floor.png 实际尺寸)
 - **招募面板素材** (非 blank 命名, 同样覆盖即换图): `assets/npc_recruit/`
   board.png (380×620 木板棕) / diamond_purple.png (80×80 紫钻) /
   bar_under.png + bar_fill.png (16×16 属性条底/填充, 九宫格)

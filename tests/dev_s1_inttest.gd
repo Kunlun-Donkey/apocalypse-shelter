@@ -7,12 +7,12 @@ extends Node
 #       → 招募面板 (Btn_Recruit 木板卡片: 陈少强/凪光/唐子涵, 每卡招募按钮+成功弹窗 + 一次性选人锁定)
 #         已选状态归 NpcSystem (config_id), BtnRecruit 为姓名门面 (is_picked/get_picked_id/被动查询)
 #       → 任务卷轴面板 (列表 任务1~10/详情/接受/放弃)
-#       → "进入" → ShelterInterior (一房一床 RoomPanel_1/BedLabel + 升级区)
+#       → "进入" → ShelterInterior (瓦片网格 TileGrid + 升级区)
 #       → 卧室 CompanionSlot 同伴名牌 → NpcDetailPanel 详情 (Mask/Esc 关闭 + 空位守卫)
 #       → 室内升级 30s 冷却 → BackButton 返回 Main
 #       → 设置弹层 game_menu 段 (存读档 3 槽/返回标题, 含 quest.accepted +
 #         npc.picked(config_id)/recruit.picked(姓名镜像) round-trip)
-# 断言项数: 94 (原 88 → 94; 招募段 6→12: 每卡招募按钮/成功弹窗/锁定后禁用)
+# 断言项数: 99 (原 94 → 99; 室内段 3→8: 一房一床 → 瓦片网格 TileGrid)
 # ============================================================
 
 var _failed := false
@@ -295,12 +295,58 @@ func _run() -> void:
 		_abort()
 		return
 
-	# 室内: 一房一床极简
-	var room := _find_by_name(interior, "RoomPanel_1")
-	_check(room != null, "室内存在 RoomPanel_1 (卧室)")
-	_check(_find_by_name(interior, "RoomPanel_2") == null, "室内不再有 RoomPanel_2 (一房极简)")
-	var bed := _find_by_name(interior, "BedLabel") as Label
-	_check(bed != null and bed.text == "床 ×1", "室内 BedLabel = 床 ×1")
+	# 室内: 瓦片网格 TileGrid (2.5D 侧剖面拼贴)
+	var tile_grid := _find_by_name(interior, "TileGrid") as GridContainer
+	_check(tile_grid != null, "室内存在 TileGrid (GridContainer)")
+	_check(
+		ConfigManager.get_shelter_level(1).get("interior_grid", Vector2i(-1, -1)) == Vector2i(4, 3)
+		and tile_grid != null
+		and int(tile_grid.get_meta("grid_cols", -1)) == 4
+		and int(tile_grid.get_meta("grid_rows", -1)) == 3,
+		"CONF Lv1 interior_grid = (4, 3) 且 TileGrid meta grid_cols/grid_rows = 4/3"
+	)
+	var cell_0_0 := _find_by_name(interior, "TileCell_0_0") as TextureRect
+	_check(
+		cell_0_0 != null
+		and str(cell_0_0.get_meta("tile_component", "")) == "tile_ceiling"
+		and int(cell_0_0.get_meta("grid_col", -1)) == 0
+		and int(cell_0_0.get_meta("grid_row", -1)) == 0,
+		"TileCell_0_0 meta tile_component = tile_ceiling (grid 0/0)"
+	)
+	var cell_0_2 := _find_by_name(interior, "TileCell_0_2") as TextureRect
+	_check(
+		cell_0_2 != null
+		and str(cell_0_2.get_meta("tile_component", "")) == "tile_floor"
+		and int(cell_0_2.get_meta("grid_col", -1)) == 0
+		and int(cell_0_2.get_meta("grid_row", -1)) == 2,
+		"TileCell_0_2 meta tile_component = tile_floor (grid 0/2)"
+	)
+	var cell_0_1 := _find_by_name(interior, "TileCell_0_1") as TextureRect
+	var cell_3_1 := _find_by_name(interior, "TileCell_3_1") as TextureRect
+	_check(
+		cell_0_1 != null and cell_3_1 != null
+		and str(cell_0_1.get_meta("tile_component", "")) == "tile_wall_side_left"
+		and int(cell_0_1.get_meta("grid_col", -1)) == 0 and int(cell_0_1.get_meta("grid_row", -1)) == 1
+		and str(cell_3_1.get_meta("tile_component", "")) == "tile_wall_side_right"
+		and int(cell_3_1.get_meta("grid_col", -1)) == 3 and int(cell_3_1.get_meta("grid_row", -1)) == 1,
+		"侧墙 TileCell_0_1 = tile_wall_side_left / TileCell_3_1 = tile_wall_side_right"
+	)
+	var cell_2_1 := _find_by_name(interior, "TileCell_2_1") as TextureRect
+	var cell_1_1 := _find_by_name(interior, "TileCell_1_1") as TextureRect
+	_check(
+		cell_2_1 != null and cell_1_1 != null
+		and str(cell_2_1.get_meta("tile_component", "")) == "tile_wall_door"
+		and int(cell_2_1.get_meta("grid_col", -1)) == 2 and int(cell_2_1.get_meta("grid_row", -1)) == 1
+		and str(cell_1_1.get_meta("tile_component", "")) == "tile_wall_window"
+		and int(cell_1_1.get_meta("grid_col", -1)) == 1 and int(cell_1_1.get_meta("grid_row", -1)) == 1,
+		"门窗 TileCell_2_1 = tile_wall_door (cols/2) / TileCell_1_1 = tile_wall_window"
+	)
+	var cell_1_0 := _find_by_name(interior, "TileCell_1_0")
+	_check(cell_1_0 is TextureRect, "TileCell_1_0 是 TextureRect (顶排瓦片)")
+	_check(
+		_find_by_name(interior, "RoomPanel_1") == null and _find_by_name(interior, "BedLabel") == null,
+		"RoomPanel_1 / BedLabel 已删 (瓦片网格取代占位房间卡)"
+	)
 
 	# 室内: 卧室同伴名牌 CompanionSlot + NpcDetailPanel 详情 (已招募 凪光)
 	var slot := _find_by_name(interior, "CompanionSlot") as Button

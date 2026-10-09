@@ -1,7 +1,7 @@
 extends Control
 # ============================================================
 # ShelterInterior — 庇护所内部场景 (Dev-S1 极简 UI 壳, blank 占位图, 后续填实际 UI 资源)
-# 一房一床极简 + 升级区: 只有 卧室(RoomPanel_1, 床 ×1) + 庇护所升级 (从 main 迁入)
+# 瓦片网格拼贴 (TileGrid): 2.5D 侧剖面瓦片网格 (InteriorTileGrid) + 庇护所升级 (从 main 迁入)
 # 同伴名牌: CompanionSlot 按钮显示已入队同伴 (BtnRecruit), 点击开 NpcDetailPanel 详情面板
 # 其余房间/家具/建造/资源/入住等玩法系统后续版本开放
 # ============================================================
@@ -15,6 +15,9 @@ var _upgrade_button: Button
 var _cooldown_label: Label
 var _upgrade_status_label: Label
 var _companion_slot: Button
+var _stage: Control
+var _tile_grid: InteriorTileGrid
+var _cell_h: float = 256.0
 
 
 func _ready() -> void:
@@ -78,12 +81,27 @@ func _build_ui() -> void:
 	mid_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root_box.add_child(mid_box)
 
-	var grid := VBoxContainer.new()
-	grid.name = "RoomGrid"
-	grid.add_theme_constant_override("separation", 20)
-	mid_box.add_child(grid)
+	# ---- 瓦片网格拼贴 (2.5D 侧剖面, InteriorStage/TileGrid, 逻辑书 B5) ----
+	_stage = Control.new()
+	_stage.name = "InteriorStage"
+	_stage.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	mid_box.add_child(_stage)
+	_build_tile_grid()
 
-	grid.add_child(_build_room_panel())
+	# 同伴名牌浮层: 挂 InteriorStage, 锚定瓦片网格左下 (地板行上方附近)
+	var companion_slot := Button.new()
+	companion_slot.name = "CompanionSlot"
+	companion_slot.custom_minimum_size = Vector2(0, 48)
+	companion_slot.add_theme_font_size_override("font_size", 22)
+	companion_slot.pressed.connect(_on_companion_slot_pressed)
+	ButtonSkin.apply(companion_slot)
+	_stage.add_child(companion_slot)
+	companion_slot.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	companion_slot.offset_left = 24.0
+	companion_slot.offset_right = 384.0
+	companion_slot.offset_top = -(_cell_h + 48.0)
+	companion_slot.offset_bottom = -_cell_h
+	_companion_slot = companion_slot
 
 	# ---- 升级区 (自 main 迁入) ----
 	var upgrade_box := VBoxContainer.new()
@@ -137,62 +155,35 @@ func _interior_bg_path() -> String:
 	return "res://assets/blank_interior_1920x1080.png"
 
 
-# 房间面板: 一房一床极简 (占位纹理 + 房名 "卧室" + BedLabel "床 ×1" + "已启用")
-# 其余房间/家具后续版本开放
-func _build_room_panel() -> PanelContainer:
-	var panel := PanelContainer.new()
-	panel.name = "RoomPanel_1"
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.05, 0.07, 0.1, 0.85)
-	style.corner_radius_top_left = 12
-	style.corner_radius_top_right = 12
-	style.corner_radius_bottom_left = 12
-	style.corner_radius_bottom_right = 12
-	style.content_margin_left = 16
-	style.content_margin_right = 16
-	style.content_margin_top = 16
-	style.content_margin_bottom = 16
-	panel.add_theme_stylebox_override("panel", style)
+# 瓦片网格拼贴: InteriorStage 内建 InteriorTileGrid (节点名 TileGrid, 测试契约)
+# cols/rows 来自 shelter_levels.conf interior_grid, stage 来自 visual_stage
+func _build_tile_grid() -> void:
+	var lv: Dictionary = _shelter.get_level_stats()
+	var g: Vector2i = Vector2i(lv.get("interior_grid", Vector2i(4, 3)))
+	var stage_str: String = str(lv.get("visual_stage", "cabin"))
+	var grid := InteriorTileGrid.new()
+	grid.name = "TileGrid"
+	_stage.add_child(grid)
+	grid.build(g.x, g.y, stage_str)
+	var needed: Vector2 = grid.custom_minimum_size
+	grid.position = Vector2.ZERO
+	grid.size = needed
+	_stage.custom_minimum_size = needed
+	_stage.size = needed
+	_tile_grid = grid
+	if g.y > 0:
+		_cell_h = needed.y / float(g.y)
 
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 8)
-	panel.add_child(box)
 
-	var room_texture := TextureRect.new()
-	room_texture.texture = load("res://assets/blank_room_panel_512x512.png")
-	room_texture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	room_texture.custom_minimum_size = Vector2(300, 220)
-	room_texture.stretch_mode = TextureRect.STRETCH_SCALE
-	box.add_child(room_texture)
-
-	var room_name_label := Label.new()
-	room_name_label.text = "卧室"
-	room_name_label.add_theme_font_size_override("font_size", 26)
-	room_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	box.add_child(room_name_label)
-
-	var bed_label := Label.new()
-	bed_label.name = "BedLabel"
-	bed_label.text = "床 ×1"
-	bed_label.add_theme_font_size_override("font_size", 22)
-	bed_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	box.add_child(bed_label)
-
-	var companion_slot := Button.new()
-	companion_slot.name = "CompanionSlot"
-	companion_slot.custom_minimum_size = Vector2(0, 48)
-	companion_slot.add_theme_font_size_override("font_size", 22)
-	companion_slot.pressed.connect(_on_companion_slot_pressed)
-	ButtonSkin.apply(companion_slot)
-	box.add_child(companion_slot)
-	_companion_slot = companion_slot
-
-	var status_label := Label.new()
-	status_label.text = "已启用"
-	status_label.add_theme_font_size_override("font_size", 18)
-	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	box.add_child(status_label)
-	return panel
+# 等级变化 → 网格随级扩: 清掉旧 TileGrid, 按新等级重建
+func _rebuild_tiles() -> void:
+	if _stage == null:
+		return
+	if _tile_grid != null and is_instance_valid(_tile_grid):
+		_stage.remove_child(_tile_grid)
+		_tile_grid.free()
+		_tile_grid = null
+	_build_tile_grid()
 
 
 # ---------------- 刷新 ----------------
@@ -268,4 +259,5 @@ func _on_upgrade_completed(new_level: int) -> void:
 
 
 func _on_level_changed(_new_level: int) -> void:
+	_rebuild_tiles()
 	_refresh()
