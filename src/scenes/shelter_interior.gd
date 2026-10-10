@@ -27,8 +27,18 @@ var _camera_3d: Camera3D
 
 func _ready() -> void:
 	_shelter = get_node("/root/ShelterSystem") as ShelterSystem
+	# 从 tscn 实体节点读取 3D 引用
+	var vp_container := get_node_or_null("InteriorViewport3D") as SubViewportContainer
+	if vp_container != null:
+		_viewport_container = vp_container
+		var vp := vp_container.get_node_or_null("SubViewport") as SubViewport
+		if vp != null:
+			var world := vp.get_node_or_null("World3D") as Node3D
+			if world != null:
+				_camera_3d = world.get_node_or_null("InteriorCamera") as Camera3D
+				_floor_grid_3d = world.get_node_or_null("FloorGrid3D") as Node3D
 	_build_ui()
-	_build_3d_viewport()
+	_build_floor_grid_3d()
 	_shelter.upgrade_started.connect(_on_upgrade_started)
 	_shelter.upgrade_completed.connect(_on_upgrade_completed)
 	_shelter.level_changed.connect(_on_level_changed)
@@ -194,7 +204,10 @@ func _rebuild_tiles() -> void:
 		_tile_grid.free()
 		_tile_grid = null
 	_build_tile_grid()
+	if _tile_grid != null:
+		_tile_grid.modulate.a = 0.0
 	_refresh_backdrop()
+	_build_floor_grid_3d()
 
 
 # ---------------- 刷新 ----------------
