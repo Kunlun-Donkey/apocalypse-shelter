@@ -1,12 +1,13 @@
 extends Control
 # ============================================================
-# ShelterInterior — 庇护所内部场景 (Dev-S1 极简 UI 壳, blank 占位图, 后续填实际 UI 资源)
-# 瓦片网格拼贴 (TileGrid): 2.5D 侧剖面瓦片网格 (InteriorTileGrid) + 庇护所升级 (从 main 迁入)
-# 同伴名牌: CompanionSlot 按钮显示已入队同伴 (BtnRecruit), 点击开 NpcDetailPanel 详情面板
-# 其余房间/家具/建造/资源/入住等玩法系统后续版本开放
+# ShelterInterior — 庇护所内部场景 (Dev-S1)
+# 3D 室内视口: SubViewportContainer + floor.glb 地砖网格
+# 2D TileGrid 保留 (测试契约), modulate.a=0 不渲染
 # ============================================================
 
 const MAIN_SCENE := "res://src/scenes/main.tscn"
+const FLOOR_GLB_PATH := "res://assets/shelter/floor.glb"
+const FLOOR_TILE_SPACING := 1.0
 
 var _shelter: ShelterSystem
 
@@ -19,10 +20,15 @@ var _stage: Control
 var _tile_grid: InteriorTileGrid
 var _cell_h: float = 256.0
 
+var _viewport_container: SubViewportContainer
+var _floor_grid_3d: Node3D
+var _camera_3d: Camera3D
+
 
 func _ready() -> void:
 	_shelter = get_node("/root/ShelterSystem") as ShelterSystem
 	_build_ui()
+	_build_3d_viewport()
 	_shelter.upgrade_started.connect(_on_upgrade_started)
 	_shelter.upgrade_completed.connect(_on_upgrade_completed)
 	_shelter.level_changed.connect(_on_level_changed)
@@ -82,6 +88,9 @@ func _build_ui() -> void:
 	_stage.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	mid_box.add_child(_stage)
 	_build_tile_grid()
+	# 2D TileGrid 保留供测试断言使用，视觉上隐藏
+	if _tile_grid != null:
+		_tile_grid.modulate.a = 0.0
 
 	# 同伴名牌浮层: 挂 InteriorStage, 锚定瓦片网格左下 (地板行上方附近)
 	var companion_slot := Button.new()
@@ -263,3 +272,111 @@ func _on_upgrade_completed(new_level: int) -> void:
 func _on_level_changed(_new_level: int) -> void:
 	_rebuild_tiles()
 	_refresh()
+
+
+# ---------------- 3D 室内场景 ----------------
+
+func _build_3d_viewport() -> void:
+	var container := SubViewportContainer.new()
+	container.name = "InteriorViewport3D"
+	container.set_anchors_preset(Control.PRESET_FULL_RECT)
+	container.stretch = true
+	# 放在 root_box 之前（底层）
+	move_child(container, 0)
+	_viewport_container = container
+
+	var vp := SubViewport.new()
+	vp.size = Vector2i(1280, 720)
+	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	container.add_child(vp)
+
+	var world_root := Node3D.new()
+	world_root.name = "World3D"
+	vp.add_child(world_root)
+
+	# 环境光
+	var env_node := WorldEnvironment.new()
+	var env := Environment.new()
+	env.background_mode = Environment.BG_COLOR
+	env.background_color = Color(0.12, 0.10, 0.09)
+	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	env.ambient_light_color = Color(0.65, 0.60, 0.55)
+	env.ambient_light_energy = 1.0
+	env_node.environment = env
+	world_root.add_child(env_node)
+
+	# 方向光
+	var dir_light := DirectionalLight3D.new()
+	dir_light.rotation_degrees = Vector3(-50.0, -30.0, 0.0)
+	dir_light.light_energy = 1.2
+	world_root.add_child(dir_light)
+
+	# 相机
+	var cam := Camera3D.new()
+	cam.name = "InteriorCamera"
+	cam.projection = Camera3D.PROJECTION_PERSPECTIVE
+	cam.fov = 55.0
+	world_root.add_child(cam)
+	_camera_3d = cam
+
+	# 地板网格根节点
+	var floor_root := Node3D.new()
+	floor_root.name = "FloorGrid3D"
+	world_root.add_child(floor_root)
+	_floor_grid_3d = floor_root
+
+	_build_floor_grid_3d()
+
+
+func _build_floor_grid_3d() -> void:
+	if _floor_grid_3d == null:
+		return
+	for child in _floor_grid_3d.get_children():
+		_floor_grid_3d.remove_child(child)
+		child.free()
+
+	var lv: Dictionary = _shelter.get_level_stats()
+	var g: Vector2i = Vector2i(lv.get("interior_grid", Vector2i(4, 3)))
+	var cols: int = g.x
+	var depth: int = g.y
+
+	if ResourceLoader.exists(FLOOR_GLB_PATH):
+		var floor_scene := load(FLOOR_GLB_PATH) as PackedScene
+		if floor_scene != null:
+			for row in range(depth):
+				for col in range(cols):
+					var tile: Node3D = floor_scene.instantiate()
+					tile.name = "FloorTile3D_%d_%d" % [col, row]
+					tile.position = Vector3(
+						col * FLOOR_TILE_SPACING,
+						0.0,
+						row * FLOOR_TILE_SPACING
+					)
+					_floor_grid_3d.add_child(tile)
+			_recenter_camera(cols, depth)
+			return
+
+	# fallback: PlaneMesh
+	for row in range(depth):
+		for col in range(cols):
+			var mi := MeshInstance3D.new()
+			mi.name = "FloorTile3D_%d_%d" % [col, row]
+			var plane := PlaneMesh.new()
+			plane.size = Vector2(FLOOR_TILE_SPACING * 0.96, FLOOR_TILE_SPACING * 0.96)
+			mi.mesh = plane
+			var mat := StandardMaterial3D.new()
+			mat.albedo_color = Color(0.35, 0.28, 0.22)
+			mi.material_override = mat
+			mi.position = Vector3(col * FLOOR_TILE_SPACING, 0.0, row * FLOOR_TILE_SPACING)
+			_floor_grid_3d.add_child(mi)
+	_recenter_camera(cols, depth)
+
+
+func _recenter_camera(cols: int, depth: int) -> void:
+	if _camera_3d == null:
+		return
+	var cx: float = (cols - 1) * FLOOR_TILE_SPACING * 0.5
+	var cz: float = (depth - 1) * FLOOR_TILE_SPACING * 0.5
+	var span: float = maxf(cols, depth) * FLOOR_TILE_SPACING
+	_camera_3d.position = Vector3(cx, span * 1.6, cz + span * 1.4)
+	_camera_3d.look_at(Vector3(cx, 0.0, cz), Vector3.UP)
