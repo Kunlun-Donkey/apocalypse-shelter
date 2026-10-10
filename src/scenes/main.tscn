@@ -1,9 +1,20 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://src/scenes/main.gd" id="1"]
 [ext_resource type="Texture2D" uid="uid://26a5w1qfttxr" path="res://assets/map/first_scene.png" id="2"]
 [ext_resource type="Texture2D" uid="uid://da0x28nnkifjb" path="res://assets/shelter/shelter_level1.png" id="3"]
 [ext_resource type="Script" path="res://src/ui/btn_recruit.gd" id="4"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn"]
+bg_color = Color(0.25, 0.18, 0.12, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_left = 8
+corner_radius_bottom_right = 8
+content_margin_left = 12.0
+content_margin_right = 12.0
+content_margin_top = 8.0
+content_margin_bottom = 8.0
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -133,6 +144,11 @@ custom_minimum_size = Vector2(0, 68)
 size_flags_horizontal = 3
 size_flags_vertical = 4
 theme_override_font_sizes/font_size = 26
+theme_override_colors/font_color = Color(0.95, 0.9, 0.8, 1)
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_btn")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_btn")
 text = "任务"
 
 [node name="WarehouseButton" type="Button" parent="BottomBar"]
@@ -141,6 +157,11 @@ custom_minimum_size = Vector2(0, 68)
 size_flags_horizontal = 3
 size_flags_vertical = 4
 theme_override_font_sizes/font_size = 26
+theme_override_colors/font_color = Color(0.95, 0.9, 0.8, 1)
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_btn")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_btn")
 text = "仓库"
 
 [node name="OutCityButton" type="Button" parent="BottomBar"]
@@ -149,6 +170,11 @@ custom_minimum_size = Vector2(0, 68)
 size_flags_horizontal = 3
 size_flags_vertical = 4
 theme_override_font_sizes/font_size = 26
+theme_override_colors/font_color = Color(0.95, 0.9, 0.8, 1)
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_btn")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_btn")
 text = "出城"
 
 [node name="ExploreButton" type="Button" parent="BottomBar"]
@@ -157,6 +183,11 @@ custom_minimum_size = Vector2(0, 68)
 size_flags_horizontal = 3
 size_flags_vertical = 4
 theme_override_font_sizes/font_size = 26
+theme_override_colors/font_color = Color(0.95, 0.9, 0.8, 1)
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_btn")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_btn")
 text = "探索"
 
 [node name="Btn_Recruit" type="Button" parent="BottomBar"]
@@ -165,6 +196,11 @@ custom_minimum_size = Vector2(0, 68)
 size_flags_horizontal = 3
 size_flags_vertical = 4
 theme_override_font_sizes/font_size = 26
+theme_override_colors/font_color = Color(0.95, 0.9, 0.8, 1)
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_btn")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_btn")
 text = "招募"
 script = ExtResource("4")
 
@@ -174,4 +210,9 @@ custom_minimum_size = Vector2(0, 68)
 size_flags_horizontal = 3
 size_flags_vertical = 4
 theme_override_font_sizes/font_size = 26
+theme_override_colors/font_color = Color(0.95, 0.9, 0.8, 1)
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_btn")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_btn")
 text = "进入"
