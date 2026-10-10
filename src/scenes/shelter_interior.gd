@@ -1,8 +1,8 @@
-extends Control
+extends Node3D
 # ============================================================
 # ShelterInterior — 庇护所内部场景 (Dev-S1)
-# 3D 室内视口: SubViewportContainer + floor.glb 地砖网格
-# 2D TileGrid 保留 (测试契约), modulate.a=0 不渲染
+# 根节点 Node3D, 编辑器 3D 视图可见可拖拽
+# 2D UI 挂 CanvasLayer(UILayer), TileGrid 保留(测试契约, modulate.a=0)
 # ============================================================
 
 const MAIN_SCENE := "res://src/scenes/main.tscn"
@@ -20,23 +20,17 @@ var _stage: Control
 var _tile_grid: InteriorTileGrid
 var _cell_h: float = 256.0
 
-var _viewport_container: SubViewportContainer
 var _floor_grid_3d: Node3D
 var _camera_3d: Camera3D
+var _ui_layer: CanvasLayer
 
 
 func _ready() -> void:
 	_shelter = get_node("/root/ShelterSystem") as ShelterSystem
-	# 从 tscn 实体节点读取 3D 引用
-	var vp_container := get_node_or_null("InteriorViewport3D") as SubViewportContainer
-	if vp_container != null:
-		_viewport_container = vp_container
-		var vp := vp_container.get_node_or_null("SubViewport") as SubViewport
-		if vp != null:
-			var world := vp.get_node_or_null("World3D") as Node3D
-			if world != null:
-				_camera_3d = world.get_node_or_null("InteriorCamera") as Camera3D
-				_floor_grid_3d = world.get_node_or_null("FloorGrid3D") as Node3D
+	# 3D 节点直接挂在场景根，路径简单
+	_camera_3d = get_node_or_null("InteriorCamera") as Camera3D
+	_floor_grid_3d = get_node_or_null("FloorGrid3D") as Node3D
+	_ui_layer = get_node_or_null("UILayer") as CanvasLayer
 	_build_ui()
 	_build_floor_grid_3d()
 	_shelter.upgrade_started.connect(_on_upgrade_started)
@@ -54,18 +48,19 @@ func _process(_delta: float) -> void:
 # ---------------- UI ----------------
 
 func _build_ui() -> void:
-	# 根节点铺满窗口 (tscn 保持最小写法, 锚点在代码里设)
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	if _ui_layer == null:
+		return
 	_refresh_backdrop()
 
 	var root_box := VBoxContainer.new()
+	root_box.name = "RootBox"
 	root_box.add_theme_constant_override("separation", 24)
 	root_box.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root_box.offset_left = 48.0
 	root_box.offset_top = 28.0
 	root_box.offset_right = -48.0
 	root_box.offset_bottom = -28.0
-	add_child(root_box)
+	_ui_layer.add_child(root_box)
 
 	var top_box := VBoxContainer.new()
 	top_box.add_theme_constant_override("separation", 8)
@@ -169,9 +164,9 @@ func _interior_bg_path() -> String:
 	return "res://assets/blank_interior_1920x1080.png"
 
 
-# 室内底图 = tscn 实体节点 InteriorBackdrop (编辑器可见可拖), 运行时按等级换贴图
+# 室内底图 = UILayer/InteriorBackdrop (编辑器可见可拖), 运行时按等级换贴图
 func _refresh_backdrop() -> void:
-	var backdrop := get_node_or_null("InteriorBackdrop") as TextureRect
+	var backdrop := get_node_or_null("UILayer/InteriorBackdrop") as TextureRect
 	if backdrop != null:
 		backdrop.texture = load(_interior_bg_path())
 
@@ -270,7 +265,7 @@ func _on_companion_slot_pressed() -> void:
 	var picked_id: String = BtnRecruit.get_picked_id()
 	if picked_id.is_empty():
 		return
-	NpcDetailPanel.open(self, picked_id)
+	NpcDetailPanel.open(_ui_layer, picked_id)
 
 
 func _on_upgrade_started(_cooldown: float) -> void:
@@ -288,58 +283,6 @@ func _on_level_changed(_new_level: int) -> void:
 
 
 # ---------------- 3D 室内场景 ----------------
-
-func _build_3d_viewport() -> void:
-	var container := SubViewportContainer.new()
-	container.name = "InteriorViewport3D"
-	container.set_anchors_preset(Control.PRESET_FULL_RECT)
-	container.stretch = true
-	# 放在 root_box 之前（底层）
-	move_child(container, 0)
-	_viewport_container = container
-
-	var vp := SubViewport.new()
-	vp.size = Vector2i(1280, 720)
-	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-	container.add_child(vp)
-
-	var world_root := Node3D.new()
-	world_root.name = "World3D"
-	vp.add_child(world_root)
-
-	# 环境光
-	var env_node := WorldEnvironment.new()
-	var env := Environment.new()
-	env.background_mode = Environment.BG_COLOR
-	env.background_color = Color(0.12, 0.10, 0.09)
-	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color(0.65, 0.60, 0.55)
-	env.ambient_light_energy = 1.0
-	env_node.environment = env
-	world_root.add_child(env_node)
-
-	# 方向光
-	var dir_light := DirectionalLight3D.new()
-	dir_light.rotation_degrees = Vector3(-50.0, -30.0, 0.0)
-	dir_light.light_energy = 1.2
-	world_root.add_child(dir_light)
-
-	# 相机
-	var cam := Camera3D.new()
-	cam.name = "InteriorCamera"
-	cam.projection = Camera3D.PROJECTION_PERSPECTIVE
-	cam.fov = 55.0
-	world_root.add_child(cam)
-	_camera_3d = cam
-
-	# 地板网格根节点
-	var floor_root := Node3D.new()
-	floor_root.name = "FloorGrid3D"
-	world_root.add_child(floor_root)
-	_floor_grid_3d = floor_root
-
-	_build_floor_grid_3d()
-
 
 func _build_floor_grid_3d() -> void:
 	if _floor_grid_3d == null:
