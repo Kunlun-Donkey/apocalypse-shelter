@@ -127,7 +127,8 @@ var _recruit_buttons: Array[Button] = []
 func _ready() -> void:
 	_panel = _build_panel()
 	_panel.visible = false
-	_find_scene_root().add_child(_panel)
+	# 按钮是场景节点时 _ready 在父节点装树期间执行, 直接 add_child 会被拒 (AGENTS §10) → 延迟挂到场景根
+	_find_scene_root().add_child.call_deferred(_panel)
 	pressed.connect(_on_button_pressed)
 
 

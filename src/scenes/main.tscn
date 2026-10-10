@@ -1,6 +1,9 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://src/scenes/main.gd" id="1"]
+[ext_resource type="Texture2D" uid="uid://26a5w1qfttxr" path="res://assets/map/first_scene.png" id="2"]
+[ext_resource type="Texture2D" uid="uid://da0x28nnkifjb" path="res://assets/shelter/shelter_level1.png" id="3"]
+[ext_resource type="Script" path="res://src/ui/btn_recruit.gd" id="4"]
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -18,6 +21,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+texture = ExtResource("2")
 expand_mode = 1
 stretch_mode = 6
 
@@ -27,5 +31,147 @@ offset_left = 880.0
 offset_top = 420.0
 offset_right = 1360.0
 offset_bottom = 780.0
+texture = ExtResource("3")
 expand_mode = 1
 stretch_mode = 5
+
+[node name="TopHud" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+grow_horizontal = 2
+grow_vertical = 1
+custom_minimum_size = Vector2(0, 88)
+
+[node name="HudRow" type="HBoxContainer" parent="TopHud"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="ResourceBar" type="HBoxContainer" parent="TopHud/HudRow"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="PopulationPanel" type="PanelContainer" parent="TopHud/HudRow"]
+layout_mode = 2
+
+[node name="PopulationLabel" type="Label" parent="TopHud/HudRow/PopulationPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+vertical_alignment = 1
+
+[node name="WeatherPanel" type="PanelContainer" parent="TopHud/HudRow"]
+layout_mode = 2
+
+[node name="WeatherLabel" type="Label" parent="TopHud/HudRow/WeatherPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+vertical_alignment = 1
+
+[node name="HudSpacer" type="Control" parent="TopHud/HudRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="LevelLabel" type="Label" parent="TopHud/HudRow"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+vertical_alignment = 1
+
+[node name="HouseButton" type="Button" parent="TopHud/HudRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(56, 48)
+tooltip_text = "庇护所状态"
+
+[node name="DayNightIcon" type="TextureRect" parent="TopHud/HudRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(48, 48)
+size_flags_vertical = 4
+expand_mode = 1
+stretch_mode = 5
+
+[node name="TimeLabel" type="Label" parent="TopHud/HudRow"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+vertical_alignment = 1
+
+[node name="SettingsButton" type="Button" parent="TopHud/HudRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(120, 48)
+theme_override_font_sizes/font_size = 22
+text = "设置"
+
+[node name="StatusLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 0
+offset_left = 48.0
+offset_top = -136.0
+offset_right = -48.0
+offset_bottom = -104.0
+theme_override_font_sizes/font_size = 20
+
+[node name="BottomBar" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 0
+offset_left = 48.0
+offset_top = -96.0
+offset_right = -48.0
+offset_bottom = -16.0
+theme_override_constants/separation = 16
+
+[node name="TaskButton" type="Button" parent="BottomBar"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 68)
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 26
+text = "任务"
+
+[node name="WarehouseButton" type="Button" parent="BottomBar"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 68)
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 26
+text = "仓库"
+
+[node name="OutCityButton" type="Button" parent="BottomBar"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 68)
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 26
+text = "出城"
+
+[node name="ExploreButton" type="Button" parent="BottomBar"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 68)
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 26
+text = "探索"
+
+[node name="Btn_Recruit" type="Button" parent="BottomBar"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 68)
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 26
+text = "招募"
+script = ExtResource("4")
+
+[node name="EnterShelterButton" type="Button" parent="BottomBar"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 68)
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 26
+text = "进入"

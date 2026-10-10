@@ -54,10 +54,10 @@ func _process(_delta: float) -> void:
 # ---------------- UI ----------------
 
 func _build_ui() -> void:
-	# 底图 MapBackground / 楼体 ShelterLayer 是 main.tscn 实体节点 (编辑器拖拽摆位), 这里只搭 UI
+	# UI 骨架 = main.tscn 实体节点 (TopHud/StatusLabel/BottomBar 等, 编辑器可见可调);
+	# 代码只做: 贴皮 (StyleBox/ButtonSkin) + 接线 (信号) + 动态内容 (资源条按 CONF 生成)
 	# ---- 顶部 HUD 通栏: 左资源条 + 右等级/时间/设置 ----
-	var hud := PanelContainer.new()
-	hud.name = "TopHud"
+	var hud := get_node("TopHud") as PanelContainer
 	var hud_style := StyleBoxFlat.new()
 	hud_style.bg_color = Color(0.05, 0.07, 0.1, 0.72)
 	hud_style.content_margin_left = 32
@@ -65,129 +65,50 @@ func _build_ui() -> void:
 	hud_style.content_margin_top = 14
 	hud_style.content_margin_bottom = 14
 	hud.add_theme_stylebox_override("panel", hud_style)
-	hud.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	hud.custom_minimum_size = Vector2(0, 88)
-	add_child(hud)
 
-	var hud_row := HBoxContainer.new()
-	hud_row.add_theme_constant_override("separation", 24)
-	hud.add_child(hud_row)
+	var hud_row := get_node("TopHud/HudRow") as HBoxContainer
 
-	_build_resource_bar(hud_row)
-	_build_population_panel(hud_row)
-	_build_weather_panel(hud_row)
-
-	var hud_spacer := Control.new()
-	hud_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	hud_row.add_child(hud_spacer)
-
-	_level_label = Label.new()
-	_level_label.name = "LevelLabel"
-	_level_label.add_theme_font_size_override("font_size", 28)
-	_level_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	hud_row.add_child(_level_label)
-
-	_build_house_button(hud_row)
-
-	_build_day_night_icon(hud_row)
-
-	_time_label = Label.new()
-	_time_label.add_theme_font_size_override("font_size", 28)
-	_time_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	hud_row.add_child(_time_label)
+	_build_resource_bar(hud_row.get_node("ResourceBar") as HBoxContainer)
+	_build_population_panel(hud_row.get_node("PopulationPanel") as PanelContainer)
+	_build_weather_panel(hud_row.get_node("WeatherPanel") as PanelContainer)
+	_level_label = hud_row.get_node("LevelLabel") as Label
+	_build_house_button(hud_row.get_node("HouseButton") as Button)
+	_build_day_night_icon(hud_row.get_node("DayNightIcon") as TextureRect)
+	_time_label = hud_row.get_node("TimeLabel") as Label
 
 	if ConfigManager.is_enabled("settings"):
-		var settings_button := Button.new()
-		settings_button.name = "SettingsButton"
-		settings_button.text = "设置"
-		settings_button.custom_minimum_size = Vector2(120, 48)
-		settings_button.add_theme_font_size_override("font_size", 22)
+		var settings_button := hud_row.get_node("SettingsButton") as Button
 		settings_button.pressed.connect(_on_settings_pressed)
 		ButtonSkin.apply(settings_button)
-		hud_row.add_child(settings_button)
+	else:
+		hud_row.get_node("SettingsButton").visible = false
 
 	# ---- 底部提示行 (BottomBar 上方) ----
-	_status_label = Label.new()
-	_status_label.name = "StatusLabel"
-	_status_label.add_theme_font_size_override("font_size", 20)
-	_status_label.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	_status_label.offset_left = 48
-	_status_label.offset_right = -48
-	_status_label.offset_top = -136
-	_status_label.offset_bottom = -104
-	add_child(_status_label)
+	_status_label = get_node("StatusLabel") as Label
 
 	# ---- 底部一排 6 功能按钮 (等分; 任务=卷轴面板, 进入=室内, 其余占位提示) ----
 	# 六按钮 → 系统映射 (system.conf 全 OFF, 除任务面板为 UI 壳外零逻辑):
 	#   任务=quest (TaskPanel 卷轴, 内容占位) / 仓库=resource(+building 容量) / 出城=map+location /
 	#   探索=exploration+loot / 招募=npc+survivor / 进入=shelter (已开)
-	var bottom_bar := HBoxContainer.new()
-	bottom_bar.name = "BottomBar"
-	bottom_bar.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	bottom_bar.offset_left = 48
-	bottom_bar.offset_right = -48
-	bottom_bar.offset_top = -96
-	bottom_bar.offset_bottom = -16
-	bottom_bar.add_theme_constant_override("separation", 16)
-	add_child(bottom_bar)
-
-	var task_button := Button.new()
-	task_button.name = "TaskButton"
-	task_button.text = "任务"
-	task_button.custom_minimum_size = Vector2(0, 68)
-	task_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	task_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	task_button.add_theme_font_size_override("font_size", 26)
+	var task_button := get_node("BottomBar/TaskButton") as Button
 	task_button.pressed.connect(_on_task_pressed)
 	ButtonSkin.apply(task_button)
-	bottom_bar.add_child(task_button)
 
-	var placeholders := [
-		["WarehouseButton", "仓库"],
-		["OutCityButton", "出城"],
-		["ExploreButton", "探索"],
-	]
-	for item: Array in placeholders:
-		var btn := Button.new()
-		btn.name = str(item[0])
-		btn.text = str(item[1])
-		btn.custom_minimum_size = Vector2(0, 68)
-		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		btn.add_theme_font_size_override("font_size", 26)
-		btn.pressed.connect(_on_placeholder_pressed.bind(str(item[1])))
+	for btn_name: String in ["WarehouseButton", "OutCityButton", "ExploreButton"]:
+		var btn := get_node("BottomBar/" + btn_name) as Button
+		btn.pressed.connect(_on_placeholder_pressed.bind(btn.text))
 		ButtonSkin.apply(btn)
-		bottom_bar.add_child(btn)
 
-	var recruit_button := BtnRecruit.new()
-	recruit_button.name = "Btn_Recruit"
-	recruit_button.text = "招募"
-	recruit_button.custom_minimum_size = Vector2(0, 68)
-	recruit_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	recruit_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	recruit_button.add_theme_font_size_override("font_size", 26)
+	var recruit_button := get_node("BottomBar/Btn_Recruit") as BtnRecruit
 	ButtonSkin.apply(recruit_button)
-	bottom_bar.add_child(recruit_button)
 
-	var enter_shelter_button := Button.new()
-	enter_shelter_button.name = "EnterShelterButton"
-	enter_shelter_button.text = "进入"
-	enter_shelter_button.custom_minimum_size = Vector2(0, 68)
-	enter_shelter_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	enter_shelter_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	enter_shelter_button.add_theme_font_size_override("font_size", 26)
+	var enter_shelter_button := get_node("BottomBar/EnterShelterButton") as Button
 	enter_shelter_button.pressed.connect(_on_enter_shelter_pressed)
 	ButtonSkin.apply(enter_shelter_button)
-	bottom_bar.add_child(enter_shelter_button)
 
 
-# 顶部资源条 (挂在 HUD 通栏内): 每资源一格 "名称 当前数/库存上限" (纯 UI 展示, S2 ResourceSystem 接管)
-func _build_resource_bar(parent: Node) -> void:
-	var bar := HBoxContainer.new()
-	bar.name = "ResourceBar"
-	bar.add_theme_constant_override("separation", 16)
-	parent.add_child(bar)
-
+# 顶部资源条 (ResourceBar = tscn 节点, 挂 HUD 通栏内): 每资源一格 "名称 当前数/库存上限" (纯 UI 展示, S2 ResourceSystem 接管)
+func _build_resource_bar(bar: HBoxContainer) -> void:
 	for item: Dictionary in ConfigManager.get_resource_display_items():
 		var key := str(item.get("key", ""))
 		var panel := PanelContainer.new()
@@ -238,44 +159,22 @@ func _refresh_resource_bar() -> void:
 
 # 人口面板 (纯 UI 展示): "人口: 当前/上限" — 当前=initial_population, 上限=等级 population_cap
 # survivor 系统开启后接管 (S1 零初始化, 不建 SurvivorSystem)
-func _build_population_panel(parent: Node) -> void:
-	var panel := PanelContainer.new()
-	panel.name = "PopulationPanel"
+func _build_population_panel(panel: PanelContainer) -> void:
 	panel.add_theme_stylebox_override("panel", _hud_chip_style())
-	parent.add_child(panel)
-
-	_population_label = Label.new()
-	_population_label.name = "PopulationLabel"
-	_population_label.add_theme_font_size_override("font_size", 22)
-	_population_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	panel.add_child(_population_label)
+	_population_label = panel.get_node("PopulationLabel") as Label
 
 
 # 天气面板 (纯 UI 壳): "天气: X" — 按游戏日轮换 WEATHERS 占位, 天气系统未开
-func _build_weather_panel(parent: Node) -> void:
-	var panel := PanelContainer.new()
-	panel.name = "WeatherPanel"
+func _build_weather_panel(panel: PanelContainer) -> void:
 	panel.add_theme_stylebox_override("panel", _hud_chip_style())
-	parent.add_child(panel)
-
-	_weather_label = Label.new()
-	_weather_label.name = "WeatherLabel"
-	_weather_label.add_theme_font_size_override("font_size", 22)
-	_weather_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	panel.add_child(_weather_label)
+	_weather_label = panel.get_node("WeatherLabel") as Label
 
 
 # 日夜图标 (时间旁): 6:00~18:00 白天 day_icon.png, 其余夜晚 night_icon.png (占位可覆盖)
-func _build_day_night_icon(parent: Node) -> void:
+func _build_day_night_icon(icon: TextureRect) -> void:
+	_day_night_icon = icon
 	_day_texture = _load_icon(DAY_ICON)
 	_night_texture = _load_icon(NIGHT_ICON)
-	_day_night_icon = TextureRect.new()
-	_day_night_icon.name = "DayNightIcon"
-	_day_night_icon.custom_minimum_size = Vector2(48, 48)
-	_day_night_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_day_night_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	_day_night_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	parent.add_child(_day_night_icon)
 
 
 func _hud_chip_style() -> StyleBoxFlat:
@@ -298,12 +197,9 @@ func _load_icon(path: String) -> Texture2D:
 	return load(path) as Texture2D
 
 
-# 房子图标按钮: 点击向下展开庇护所状态面板 (生命/攻击/防御/恢复, 逻辑书 B4.3)
-func _build_house_button(parent: Node) -> void:
-	_house_button = Button.new()
-	_house_button.name = "HouseButton"
-	_house_button.custom_minimum_size = Vector2(56, 48)
-	_house_button.tooltip_text = "庇护所状态"
+# 房子图标按钮 (HouseButton = tscn 节点): 点击向下展开庇护所状态面板 (生命/攻击/防御/恢复, 逻辑书 B4.3)
+func _build_house_button(button: Button) -> void:
+	_house_button = button
 	_house_button.icon = _load_icon(HOUSE_ICON)
 	if _house_button.icon != null:
 		_house_button.expand_icon = true
@@ -318,7 +214,6 @@ func _build_house_button(parent: Node) -> void:
 	_house_button.add_theme_stylebox_override("hover", hover_style)
 	_house_button.add_theme_stylebox_override("pressed", hover_style)
 	_house_button.pressed.connect(_on_house_pressed)
-	parent.add_child(_house_button)
 
 
 func _weather_text() -> String:

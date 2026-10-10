@@ -18,12 +18,8 @@ func _ready() -> void:
 
 
 func _build_ui() -> void:
-	var bg := TextureRect.new()
-	bg.texture = load("res://assets/blank_login_1920x1080.png")
-	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(bg)
+	# 背景 = login.tscn 实体节点 LoginBackground (编辑器可见可拖, 覆盖 blank_login 同名文件即换图)
+	var bg := get_node("LoginBackground") as TextureRect
 
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.35)

@@ -40,6 +40,7 @@ func _process(_delta: float) -> void:
 func _build_ui() -> void:
 	# 根节点铺满窗口 (tscn 保持最小写法, 锚点在代码里设)
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	_refresh_backdrop()
 
 	var root_box := VBoxContainer.new()
 	root_box.add_theme_constant_override("separation", 24)
@@ -149,6 +150,13 @@ func _interior_bg_path() -> String:
 	return "res://assets/blank_interior_1920x1080.png"
 
 
+# 室内底图 = tscn 实体节点 InteriorBackdrop (编辑器可见可拖), 运行时按等级换贴图
+func _refresh_backdrop() -> void:
+	var backdrop := get_node_or_null("InteriorBackdrop") as TextureRect
+	if backdrop != null:
+		backdrop.texture = load(_interior_bg_path())
+
+
 # 瓦片网格拼贴: InteriorStage 内建 InteriorTileGrid (节点名 TileGrid, 测试契约)
 # cols/rows 来自 shelter_levels.conf interior_grid, stage 来自 visual_stage
 func _build_tile_grid() -> void:
@@ -177,6 +185,7 @@ func _rebuild_tiles() -> void:
 		_tile_grid.free()
 		_tile_grid = null
 	_build_tile_grid()
+	_refresh_backdrop()
 
 
 # ---------------- 刷新 ----------------
