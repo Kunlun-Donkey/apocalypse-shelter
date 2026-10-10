@@ -7,7 +7,7 @@ extends Node3D
 
 const MAIN_SCENE := "res://src/scenes/main.tscn"
 const FLOOR_GLB_PATH := "res://assets/shelter/floor.glb"
-const FLOOR_TILE_SPACING := 1.0
+const FLOOR_TILE_SPACING := 2.0
 
 var _shelter: ShelterSystem
 
